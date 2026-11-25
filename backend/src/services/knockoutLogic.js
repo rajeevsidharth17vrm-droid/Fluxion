@@ -117,14 +117,12 @@ export async function advanceKnockoutWinner(match, winnerId) {
       [season]
     )
     const third = thirdMatch.rows[0]
+    // Weekend Series BDR: Champion=20, Runner-up=10, 3rd/4th=0
     if (third?.winner_id && await claimAward("team_knockout_champion_bdr", season)) {
-      const thirdId  = third.winner_id
-      const fourthId = third.winner_id === third.team1_id ? third.team2_id : third.team1_id
       const placements = [
-        { teamId: winnerId, bdr: 12, flatPts: 12 },
-        { teamId: loserId,  bdr: 9,  flatPts: 9  },
-        { teamId: thirdId,  bdr: 7,  flatPts: 7  },
-        { teamId: fourthId, bdr: 5,  flatPts: 5  },
+        { teamId: winnerId, bdr: 20, flatPts: 20 },
+        { teamId: loserId,  bdr: 10, flatPts: 10 },
+        // 3rd and 4th get no BDR for Weekend Series
       ]
       for (const { teamId, bdr, flatPts } of placements) {
         const players = await query("SELECT id FROM players WHERE team_id = $1", [teamId])
@@ -145,14 +143,14 @@ export async function advanceKnockoutWinner(match, winnerId) {
       "SELECT winner_id, team1_id, team2_id FROM team_knockout_matches WHERE season_number=$1 AND match_type='champions_final'",
       [season]
     )).rows[0]
+    // Weekend Series BDR (triggered from 3rd place match): Champion=20, Runner-up=10 only
     if (cf?.winner_id && await claimAward("team_knockout_champion_bdr", season)) {
       const champWinnerId = cf.winner_id
       const champLoserId  = cf.winner_id === cf.team1_id ? cf.team2_id : cf.team1_id
       const placements = [
-        { teamId: champWinnerId, bdr: 12, flatPts: 12 },
-        { teamId: champLoserId,  bdr: 9,  flatPts: 9  },
-        { teamId: winnerId,      bdr: 7,  flatPts: 7  },
-        { teamId: loserId,       bdr: 5,  flatPts: 5  },
+        { teamId: champWinnerId, bdr: 20, flatPts: 20 },
+        { teamId: champLoserId,  bdr: 10, flatPts: 10 },
+        // 3rd/4th get no BDR for Weekend Series
       ]
       for (const { teamId, bdr, flatPts } of placements) {
         const players = await query("SELECT id FROM players WHERE team_id = $1", [teamId])

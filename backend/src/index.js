@@ -36,7 +36,9 @@ import seasonSummaryRoutes from "./routes/seasonSummaries.js"
 import finalsSetsRoutes    from "./routes/finalsSets.js"
 import { setSocketServer } from "./services/socket.js"
 import { errorHandler } from "./middleware/errorHandler.js"
-import powerRankingsRouter from "./routes/powerRankings.js"
+import { query } from "./db/pool.js"
+import { recalcMarketValue } from "./services/marketValue.js"
+import { authenticate, adminOnly } from "./middleware/auth.js"
 
 const app  = express()
 const PORT = process.env.PORT || 3001
@@ -52,7 +54,6 @@ app.use(cors({
 }))
 app.use(express.json({ limit: "10mb" }))
 app.use(express.urlencoded({ limit: "10mb", extended: true }))
-app.use("/api/power-rankings", powerRankingsRouter)
 
 // Request logger (dev only)
 if (process.env.NODE_ENV === "development") {
@@ -116,10 +117,6 @@ app.patch("/api/settings", authenticate, adminOnly, async (req, res) => {
     res.status(500).json({ error: err.message })
   }
 })
-
-import { query } from "./db/pool.js"
-import { recalcMarketValue } from "./services/marketValue.js"
-import { authenticate, adminOnly } from "./middleware/auth.js"
 
 app.post("/admin/recalc-mv", authenticate, adminOnly, async (req, res) => {
   try {

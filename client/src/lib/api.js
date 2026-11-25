@@ -273,6 +273,7 @@ export const auctionApi = {
   enter:        (sessionId)                      => api.post("/auction/enter", { sessionId }).then(r => r.data),
   leave:        (sessionId)                      => api.post("/auction/leave", { sessionId }).then(r => r.data),
   priceHistory: (playerId)                       => api.get(`/auction/price-history/${playerId}`).then(r => r.data),
+  teamBid:      (sessionId, amount)              => api.post("/auction/team-bid", { sessionId, amount }).then(r => r.data),
 }
 export const calendarApi = {
   list:     (month) => api.get(`/calendar?month=${month}`).then(r => r.data),

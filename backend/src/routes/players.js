@@ -1065,7 +1065,6 @@ router.get("/:id/bdr-breakdown", async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-export default router
 // ── GET /api/players/:id/tournament-history ───────────────────────────────────
 // Returns per-player tournament history across Weekly, Revolution, UCL, Duo.
 // Aggregates counts of how many times they reached/were eliminated at each round.
@@ -1303,3 +1302,5 @@ router.get("/:id/form-heatmap", async (req, res, next) => {
     res.json(rows)
   } catch (err) { next(err) }
 })
+
+export default router

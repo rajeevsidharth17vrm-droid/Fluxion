@@ -431,10 +431,12 @@ router.patch("/matches/:matchId/result", authenticate, adminOnly, async (req, re
     const qfRound     = totalRounds - 2
 
     // Total BDR a player should have for reaching a given round
+    // Solo Tour BDR totals: QF=8, SF=13, Final(runner-up)=20, Champion=30
+    // Diffs: reach QF=+8, reach SF=+5, reach Final=+7, win Final=+10
     function bdrForReaching(round) {
-      if (round >= finalRound) return 8   // reached Final = runner-up level
-      if (round >= sfRound)    return 5   // reached SF
-      if (round >= qfRound)    return 3   // reached QF
+      if (round >= finalRound) return 20  // reached Final = runner-up level
+      if (round >= sfRound)    return 13  // reached SF
+      if (round >= qfRound)    return 8   // reached QF
       return 0
     }
 
@@ -447,7 +449,7 @@ router.patch("/matches/:matchId/result", authenticate, adminOnly, async (req, re
     }
 
     // Champion bonus: awarded on top of runner-up when winning the final
-    const championBonus = match.round === finalRound ? (10 - 8) : 0
+    const championBonus = match.round === finalRound ? (30 - 20) : 0
 
     // The diff this match's winner earns (either advancing or winning final)
     const winnerDiff = match.round === finalRound
@@ -560,7 +562,7 @@ router.patch("/matches/:matchId/result", authenticate, adminOnly, async (req, re
           // Award new holder — single row per tournament for golden boot
           if (newGbHolder) {
             await upsertBdrForSource(
-              newGbHolder.id, 4,
+              newGbHolder.id, 15,
               `${tournamentName} · Golden Boot`,
               season,
               `weekly_gb_bdr_${match.tournament_id}_${newGbHolder.id}`
@@ -687,9 +689,9 @@ router.post("/migrate-bdr", authenticate, adminOnly, async (req, res, next) => {
     const qfRound    = totalRounds - 2
 
     function bdrForReaching(round) {
-      if (round >= finalRound) return 8
-      if (round >= sfRound)    return 5
-      if (round >= qfRound)    return 3
+      if (round >= finalRound) return 20
+      if (round >= sfRound)    return 13
+      if (round >= qfRound)    return 8
       return 0
     }
     function advancementDiff(currentRound) {
@@ -787,7 +789,7 @@ router.post("/migrate-bdr", authenticate, adminOnly, async (req, res, next) => {
       // Only insert if no new-style row exists yet for this source
       const gbSourceKey = `weekly_gb_bdr_${tournamentId}_${gbWinner.id}`
       await upsertBdrForSource(
-        gbWinner.id, 4,
+        gbWinner.id, 15,
         `${tournamentName} · Golden Boot`,
         season,
         gbSourceKey

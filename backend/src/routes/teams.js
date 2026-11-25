@@ -584,6 +584,7 @@ router.get("/trophy-history/:year", async (req, res, next) => {
           COALESCE(h.trophy9_count,0) AS "trophy9Count",
           COALESCE(h.trophy10_count,0) AS "trophy10Count",
           COALESCE(h.trophy11_count,0) AS "trophy11Count",
+          COALESCE(h.trophy12_count,0) AS "trophy12Count",
           0 AS "trophy13Count"
         FROM players p
         LEFT JOIN teams t ON t.id = p.team_id
@@ -592,7 +593,7 @@ router.get("/trophy-history/:year", async (req, res, next) => {
       `, [year])
       return res.json(r.rows)
     } catch {
-      // trophy8–11 columns may not exist yet — fall back to trophy1–7 only
+      // trophy8–12 columns may not exist yet — fall back to trophy1–7 only
       try {
         const r = await query(`
           SELECT p.id, p.name, p.grade,
@@ -606,7 +607,8 @@ router.get("/trophy-history/:year", async (req, res, next) => {
             COALESCE(h.trophy6_count,0) AS "trophy6Count",
             COALESCE(h.trophy7_count,0) AS "trophy7Count",
             0 AS "trophy8Count", 0 AS "trophy9Count",
-            0 AS "trophy10Count", 0 AS "trophy11Count", 0 AS "trophy13Count"
+            0 AS "trophy10Count", 0 AS "trophy11Count",
+            0 AS "trophy12Count", 0 AS "trophy13Count"
           FROM players p
           LEFT JOIN teams t ON t.id = p.team_id
           LEFT JOIN player_trophy_history h ON h.player_id = p.id AND h.year = $1
@@ -1386,30 +1388,47 @@ router.post("/season-reset", authenticate, adminOnly, async (req, res, next) => 
     // Rank by season win rate. Apply grade rules with protection.
     const gradeUpdateLog = []
 
+    // Use two separate CTEs (player_id side + opponent_id side) instead of OR join —
+    // OR conditions on large tables cause seq scans and timeouts.
     const eligibleRes = await query(`
+      WITH player_stats AS (
+        SELECT
+          player_id AS pid,
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE result = 'win')::int AS wins
+        FROM match_records
+        WHERE season_number = $1
+        GROUP BY player_id
+      ),
+      opp_stats AS (
+        SELECT
+          opponent_id AS pid,
+          COUNT(*)::int AS total,
+          COUNT(*) FILTER (WHERE result = 'loss')::int AS wins
+        FROM match_records
+        WHERE season_number = $1
+        GROUP BY opponent_id
+      ),
+      combined AS (
+        SELECT pid,
+          COALESCE(ps.total,0) + COALESCE(os.total,0) AS matches,
+          COALESCE(ps.wins,0)  + COALESCE(os.wins,0)  AS wins
+        FROM (SELECT DISTINCT pid FROM (
+          SELECT player_id AS pid FROM match_records WHERE season_number = $1
+          UNION
+          SELECT opponent_id FROM match_records WHERE season_number = $1
+        ) x) ids
+        LEFT JOIN player_stats ps USING (pid)
+        LEFT JOIN opp_stats os USING (pid)
+      )
       SELECT
-        p.id,
-        p.name,
-        p.grade                                                      AS current_grade,
-        p.grade_floor,
-        p.grade_ceiling,
-        COUNT(*)::int                                                AS matches,
-        COUNT(*) FILTER (WHERE
-          (mr.player_id   = p.id AND mr.result = 'win') OR
-          (mr.opponent_id = p.id AND mr.result = 'loss')
-        )::int                                                       AS wins,
-        ROUND(
-          COUNT(*) FILTER (WHERE
-            (mr.player_id   = p.id AND mr.result = 'win') OR
-            (mr.opponent_id = p.id AND mr.result = 'loss')
-          )::numeric / NULLIF(COUNT(*), 0) * 100, 2
-        )                                                            AS win_rate
-      FROM players p
-      JOIN match_records mr
-        ON (mr.player_id = p.id OR mr.opponent_id = p.id)
-        AND mr.season_number = $1
-      GROUP BY p.id, p.name, p.grade, p.grade_floor, p.grade_ceiling
-      HAVING COUNT(*) >= 20
+        p.id, p.name,
+        p.grade::text AS current_grade, p.grade_floor::text AS grade_floor, p.grade_ceiling::text AS grade_ceiling,
+        c.matches, c.wins,
+        ROUND(c.wins::numeric / NULLIF(c.matches,0) * 100, 2) AS win_rate
+      FROM combined c
+      JOIN players p ON p.id = c.pid
+      WHERE c.matches >= 20
       ORDER BY win_rate DESC, wins DESC
     `, [endingSeason])
 
@@ -1419,7 +1438,7 @@ router.post("/season-reset", authenticate, adminOnly, async (req, res, next) => 
     const rankToGrade = (rank) => {
       if (rank <= 10) return "S"
       if (rank <= 20) return "A"
-      if (rank <= 50) return "B"
+      if (rank <= 40) return "B"
       return "C"
     }
 

@@ -14,12 +14,12 @@ import { reconcileTeamTrophy } from "../services/teamTrophyAwards.js"
 import { addBdr, addBdrWithLabel, upsertBdrForSource, addLeagueBdr, addTeamChampionshipPts } from "../services/bdrAwards.js"
 import { updateSeasonRecord } from "../services/seasonRecord.js"
 
-// BDR for final standings — same as regular Team League playoffs
+// Auction Tour BDR: Champion=50, Runner-up=30, 3rd/4th/Europa=0
 const TLG_BDR = {
-  champions_final: { winner: 12, loser: 9  }, // Champion +12, Runner-up +9
-  third_place:     { winner: 7,  loser: 5  }, // 3rd +7, 4th +5
-  europa_final:    { winner: 0,  loser: 0  }, // No extra BDR for Europa
-  seventh_place:   { winner: 0,  loser: 0  }, // No extra BDR for 7th/8th
+  champions_final: { winner: 50, loser: 30 }, // Champion +50, Runner-up +30
+  third_place:     { winner: 0,  loser: 0  }, // No BDR for 3rd/4th
+  europa_final:    { winner: 0,  loser: 0  }, // No BDR for Europa
+  seventh_place:   { winner: 0,  loser: 0  }, // No BDR for 7th/8th
 }
 // Flat championship points per team (not per player)
 const TLG_CHAMP_PTS = {

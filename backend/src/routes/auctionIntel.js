@@ -160,8 +160,6 @@ router.get("/auction-history", async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-export default router
-
 // ── Table: player_mv_history (created on startup) ────────────────────────────
 ;(async () => {
   try {
@@ -246,3 +244,5 @@ router.post("/snapshot-mv", authenticate, async (req, res, next) => {
     res.json({ ok: true, snapshotted: count, season })
   } catch (err) { next(err) }
 })
+
+export default router

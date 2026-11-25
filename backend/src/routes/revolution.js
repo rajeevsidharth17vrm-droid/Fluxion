@@ -6,6 +6,7 @@ import { recalcMarketValue } from "../services/marketValue.js"
 import { recalcForm } from "../services/form.js"
 import { awardOrReassignTrophy } from "../services/trophyAwards.js"
 import { incrementHistory, roundLabel, saveActiveCelebration } from "../services/tournamentHistoryService.js"
+import { upsertBdrForSource } from "../services/bdrAwards.js"
 
 const router = Router()
 
@@ -322,7 +323,7 @@ router.patch("/matches/:matchId/players", authenticate, adminOnly, async (req, r
 
 // PATCH /api/revolution/matches/:matchId/result — save result
 // Creates match_records (match_type='revolution'), recalcs MV + form for both players.
-// No BDR awarded for Revolution — trophy8 awarded to champion only.
+// Quick Tour BDR: Winner=10, Runner-up=5. Awarded at the final only.
 router.patch("/matches/:matchId/result", authenticate, adminOnly, async (req, res, next) => {
   try {
     const { player1Score, player2Score, tieWinnerId, isWalkover } = z.object({
@@ -437,6 +438,24 @@ router.patch("/matches/:matchId/result", authenticate, adminOnly, async (req, re
         await query("INSERT INTO bdr_awards_log (award_type, reference_id) VALUES ($1,$2)", [`rev_runnerup_team_${tournId}`, loserTeamId])
         await query("INSERT INTO bdr_awards_log (award_type, reference_id) VALUES ($1,$2)", [`rev_runnerup_player_${tournId}`, loserId])
       }
+
+      // ── Quick Tour BDR (edit-safe: reverse old then re-award) ───────────────
+      // Source keys are stable per player per tournament — upsertBdrForSource
+      // handles reversal automatically when the winner changes on a re-save.
+      const revLabel = `Quick Tour #${tournId}`
+      try {
+        await upsertBdrForSource(winnerId, 10, revLabel, season, `rev_winner_bdr_${tournId}_${winnerId}`)
+        // If this is a re-save and the winner changed, reverse the old winner's BDR
+        if (match.winner_id && match.winner_id !== winnerId) {
+          await upsertBdrForSource(match.winner_id, -10, revLabel, season, `rev_winner_bdr_${tournId}_${match.winner_id}`)
+        }
+        await upsertBdrForSource(loserId, 5, revLabel, season, `rev_runnerup_bdr_${tournId}_${loserId}`)
+        // If re-save changed loser, reverse old loser's runner-up BDR
+        if (match.winner_id && match.winner_id !== winnerId) {
+          // old loser was winnerId (now the new winner) — reverse their runner-up pts
+          await upsertBdrForSource(winnerId, -5, revLabel, season, `rev_runnerup_bdr_${tournId}_${winnerId}`)
+        }
+      } catch (e) { console.error("[revolution] BDR award error:", e) }
     }
 
     // ── Advance winner to next round ────────────────────────────────────────

@@ -690,7 +690,7 @@ router.post("/:id/close", authenticate, adminOnly, async (req, res, next) => {
           ),
           team_pts AS (
             SELECT home_team_id AS team_id,
-              SUM(CASE WHEN home_pts > away_pts THEN home_pts ELSE home_pts END) AS pts,
+              SUM(CASE WHEN home_pts > away_pts THEN 3 WHEN home_pts = away_pts THEN 1 ELSE 0 END) AS pts,
               SUM(home_gf) AS gf
             FROM fixture_scores GROUP BY home_team_id
             UNION ALL
@@ -750,11 +750,12 @@ router.post("/:id/close", authenticate, adminOnly, async (req, res, next) => {
             SELECT id AS team_id,
               ROW_NUMBER() OVER (ORDER BY score_points DESC, gf - ga DESC, gf DESC) AS pos
             FROM teams
-            ORDER BY points DESC
+            ORDER BY score_points DESC
             LIMIT 8
           `)
 
-          const bdrByPos = { 1: 12, 2: 9, 3: 7, 4: 5 }
+          // Auction Tour BDR: Champion=50, Runner-up=30, rest=0
+          const bdrByPos = { 1: 50, 2: 30 }
           for (const row of standingsRes.rows) {
             const bdr = bdrByPos[row.pos] || 0
             if (bdr > 0) {

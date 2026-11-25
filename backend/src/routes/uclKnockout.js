@@ -325,14 +325,14 @@ router.patch("/matches/:matchId/result", authenticate, adminOnly, async (req, re
     // BDR is awarded for REACHING a round. When advancing further, only the
     // DIFFERENCE is added (never cumulative).
     //
-    // UCL BDR totals:  QF=4, SF=8, Final(runner-up)=12, Champion=15
-    // So diffs:        reach QF=+4, reach SF=+4, reach Final=+4, win Final=+3
+    // UCL BDR totals:  QF=8, SF=13, Final(runner-up)=20, Champion=30
+    // So diffs:        reach QF=+8, reach SF=+5, reach Final=+7, win Final=+10
 
     // Total BDR a player should have for reaching a given round
     function bdrForReaching(round) {
-      if (round >= 5) return 12  // reached Final = runner-up level
-      if (round >= 4) return 8   // reached SF
-      if (round >= 3) return 4   // reached QF
+      if (round >= 5) return 20  // reached Final = runner-up level
+      if (round >= 4) return 13  // reached SF
+      if (round >= 3) return 8   // reached QF
       return 0
     }
 
@@ -345,7 +345,7 @@ router.patch("/matches/:matchId/result", authenticate, adminOnly, async (req, re
     }
 
     // Champion bonus: awarded on top of runner-up when winning the final
-    const championBonus = match.round === 5 ? (15 - 12) : 0
+    const championBonus = match.round === 5 ? (30 - 20) : 0
 
     // The diff this match's winner earns
     const winnerDiff = match.round === 5
@@ -416,7 +416,7 @@ router.patch("/matches/:matchId/result", authenticate, adminOnly, async (req, re
         `, [match.tournament_id])
         if (goldenBootRes.rows[0]?.goals > 0) {
           const gbPlayerId = goldenBootRes.rows[0].id
-          await upsertBdrForSource(gbPlayerId, 6, `UCL S${season} Golden Boot`, season, `ucl_golden_boot_s${season}_player_${gbPlayerId}`)
+          await upsertBdrForSource(gbPlayerId, 15, `UCL S${season} Golden Boot`, season, `ucl_golden_boot_s${season}_player_${gbPlayerId}`)
         }
       }
 

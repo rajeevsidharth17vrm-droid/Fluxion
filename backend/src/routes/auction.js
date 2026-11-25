@@ -413,6 +413,63 @@ router.post("/next-player", authenticate, adminOnly, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
+// POST /api/auction/team-bid — a team owner bids for their own team.
+// Separate from /bid (admin-only). Team owners can only bid for themselves.
+// If the bid amount is no longer higher than the current bid (someone else
+// just bid), returns 409 with the current real bid so the frontend can
+// prompt: "Someone just bid ₹X — do you still want to bid ₹Y?"
+router.post("/team-bid", authenticate, async (req, res, next) => {
+  try {
+    if (req.user.role !== "team_owner") {
+      return res.status(403).json({ error: "Only team owners can use this endpoint." })
+    }
+    const teamId = req.user.teamId
+    if (!teamId) {
+      return res.status(403).json({ error: "Your account is not associated with a team." })
+    }
+
+    const { sessionId, amount } = z.object({
+      sessionId: z.number().int(),
+      amount:    z.number().int().positive(),
+    }).parse(req.body)
+
+    const sessionRes = await query(
+      "SELECT current_bid, current_player_id, status FROM auction_sessions WHERE id=$1",
+      [sessionId]
+    )
+    const session = sessionRes.rows[0]
+    if (!session) return res.status(404).json({ error: "Auction session not found." })
+    if (session.status !== "active") return res.status(400).json({ error: "Auction is not currently active." })
+    if (!session.current_player_id) return res.status(400).json({ error: "No player is currently up for bidding." })
+
+    // Stale bid check — return current real price so frontend can re-prompt
+    if (amount <= session.current_bid) {
+      return res.status(409).json({
+        error: `Someone just bid ₹${session.current_bid}. Your bid of ₹${amount} is no longer valid.`,
+        currentBid: session.current_bid,
+      })
+    }
+
+    const teamRes = await query("SELECT budget FROM teams WHERE id=$1", [teamId])
+    if (!teamRes.rows[0]) return res.status(404).json({ error: "Team not found." })
+    if (amount > teamRes.rows[0].budget) {
+      return res.status(400).json({ error: `Insufficient budget. Your team only has ₹${teamRes.rows[0].budget} remaining.` })
+    }
+
+    await query(
+      "UPDATE auction_sessions SET current_bid=$1, current_bidder_team_id=$2, timer_started_at=$3, version = version + 1 WHERE id=$4",
+      [amount, teamId, new Date(), sessionId]
+    )
+    await query(
+      "INSERT INTO auction_bid_log (session_id, player_id, team_id, amount) VALUES ($1,$2,$3,$4)",
+      [sessionId, session.current_player_id, teamId, amount]
+    )
+
+    res.json({ success: true, currentBid: amount })
+    broadcastAuctionUpdate(getFullAuctionState)
+  } catch (err) { next(err) }
+})
+
 // POST /api/auction/bid — a team places a bid on the current player.
 router.post("/bid", authenticate, adminOnly, async (req, res, next) => {
   try {

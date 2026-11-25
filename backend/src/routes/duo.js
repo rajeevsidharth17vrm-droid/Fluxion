@@ -597,8 +597,9 @@ router.post("/fixtures/:id/score", authenticate, adminOnly, async (req, res, nex
           const loserPair   = winnerPairId === fix.home_pair_id ? awayPair : homePair
           const winnerPair  = winnerPairId === fix.home_pair_id ? homePair : awayPair
 
-          const LOSER_BDR  = { qf: 4, sf: 6, final: 8 }
-          const WINNER_BDR = { final: 10 }
+          // Duo Tour BDR: Winner=30, Runner-up=20, 3rd(SF loser)=10, QF loser=0
+          const LOSER_BDR  = { qf: 0, sf: 10, final: 20 }
+          const WINNER_BDR = { final: 30 }
           const loserBdr   = LOSER_BDR[fix.knockout_round]
           const winnerBdr  = WINNER_BDR[fix.knockout_round]
           const duoSn1    = loserPair.season_number
@@ -645,7 +646,7 @@ router.post("/fixtures/:id/score", authenticate, adminOnly, async (req, res, nex
             `, [seasonNum])
             const topScorer = gbRes.rows[0]
             if (topScorer?.goals > 0) {
-              await upsertBdrForSource(topScorer.player_id, 4, `S${seasonNum} Duo Golden Boot`, seasonNum, `duo_golden_boot_s${seasonNum}_player_${topScorer.player_id}`)
+              await upsertBdrForSource(topScorer.player_id, 10, `S${seasonNum} Duo Golden Boot`, seasonNum, `duo_golden_boot_s${seasonNum}_player_${topScorer.player_id}`)
               await awardOrReassignTrophy({
                 sourceKey:    `duo_golden_boot_s${seasonNum}`,
                 trophyColumn: "trophy11_count",
@@ -1500,8 +1501,9 @@ router.post("/fixtures/:id/knockout-decider", authenticate, adminOnly, async (re
       // BDR awards
       const winnerPair = winnerPairId === fix.home_pair_id ? homePair : awayPair
       const loserPair  = loserPairId  === fix.home_pair_id ? homePair : awayPair
-      const LOSER_BDR  = { qf: 4, sf: 6, final: 8 }
-      const WINNER_BDR = { final: 10 }
+      // Duo Tour BDR: Winner=30, Runner-up=20, 3rd(SF loser)=10, QF loser=0
+      const LOSER_BDR  = { qf: 0, sf: 10, final: 20 }
+      const WINNER_BDR = { final: 30 }
       const loserBdr   = LOSER_BDR[fix.knockout_round]
       const winnerBdr  = WINNER_BDR[fix.knockout_round]
       const duoSn2    = loserPair.season_number
@@ -1584,7 +1586,7 @@ router.post("/fixtures/:id/knockout-decider", authenticate, adminOnly, async (re
         `, [seasonNum])
         const topScorer = gbRes.rows[0]
         if (topScorer?.goals > 0) {
-          await upsertBdrForSource(topScorer.player_id, 4, `S${seasonNum} Duo Golden Boot`, seasonNum, `duo_golden_boot_s${seasonNum}_player_${topScorer.player_id}`)
+          await upsertBdrForSource(topScorer.player_id, 10, `S${seasonNum} Duo Golden Boot`, seasonNum, `duo_golden_boot_s${seasonNum}_player_${topScorer.player_id}`)
           await awardOrReassignTrophy({
             sourceKey:    `duo_golden_boot_s${seasonNum}`,
             trophyColumn: "trophy11_count",
@@ -1781,7 +1783,7 @@ router.post("/fixtures/:id/decider/result", authenticate, adminOnly, async (req,
         `, [seasonNum])
         const topScorer = gbRes.rows[0]
         if (topScorer?.goals > 0) {
-          await upsertBdrForSource(topScorer.player_id, 4, `S${seasonNum} Duo Golden Boot`, seasonNum, `duo_golden_boot_s${seasonNum}_player_${topScorer.player_id}`)
+          await upsertBdrForSource(topScorer.player_id, 10, `S${seasonNum} Duo Golden Boot`, seasonNum, `duo_golden_boot_s${seasonNum}_player_${topScorer.player_id}`)
           await awardOrReassignTrophy({
             sourceKey:    `duo_golden_boot_s${seasonNum}`,
             trophyColumn: "trophy11_count",

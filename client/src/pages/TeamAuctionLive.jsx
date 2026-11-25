@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom"
-import { useState, useEffect } from "react"
-import { Gavel, Trophy, Sparkles, ArrowLeft, ChevronDown, ChevronUp } from "lucide-react"
+import { useState, useEffect, useRef } from "react"
+import { Gavel, Trophy, Sparkles, ArrowLeft, ChevronDown, ChevronUp, IndianRupee, AlertTriangle } from "lucide-react"
 import { useAuctionCurrent, usePlayer, useAuctionTargets, usePlayers } from "../lib/queries"
+import { auctionApi } from "../lib/api"
 import { cn } from "../lib/utils"
 import { findMostExpensiveSale } from "../lib/auctionNarrative"
 import { useAuctionReveal } from "../hooks/useAuctionReveal"
@@ -243,6 +244,215 @@ function MobileTeamsDrawer({ teams, sales, retentions, budgetPerTeam }) {
   )
 }
 
+// ─── Team-owner bid panel ────────────────────────────────────────────────────
+// Visible only when a player is currently live. Lets the team owner type an
+// amount and submit it to POST /api/auction/team-bid.
+//
+// 409 flow: the server returns { currentBid } when the amount is stale. We
+// surface a confirmation dialog — "Someone just bid ₹X. Still want ₹Y?" —
+// so the owner can consciously confirm or cancel rather than getting silently
+// rejected.
+function BidPanel({ session, myTeam }) {
+  const [amount, setAmount]           = useState("")
+  const [loading, setLoading]         = useState(false)
+  const [error, setError]             = useState(null)
+  const [success, setSuccess]         = useState(false)
+  // outbidDialog: { staleAmount, currentBid } or null
+  const [outbidDialog, setOutbidDialog] = useState(null)
+  const inputRef = useRef(null)
+
+  const minBid   = (session.currentBid ?? 0) + 1
+  const budget   = myTeam?.budget ?? 0
+  const hasPlayer = !!session.currentPlayerId
+  const isMyTeamLeading = session.currentBidderTeamId === myTeam?.id
+
+  // Clear success flash after 2 s
+  useEffect(() => {
+    if (!success) return
+    const t = setTimeout(() => setSuccess(false), 2000)
+    return () => clearTimeout(t)
+  }, [success])
+
+  // Reset amount field when player changes
+  const prevPlayerRef = useRef(session.currentPlayerId)
+  useEffect(() => {
+    if (session.currentPlayerId !== prevPlayerRef.current) {
+      prevPlayerRef.current = session.currentPlayerId
+      setAmount("")
+      setError(null)
+      setSuccess(false)
+      setOutbidDialog(null)
+    }
+  }, [session.currentPlayerId])
+
+  async function submitBid(bidAmount) {
+    const parsed = parseInt(bidAmount, 10)
+    if (!parsed || parsed < minBid) {
+      setError(`Bid must be at least ₹${minBid}`)
+      return
+    }
+    if (parsed > budget) {
+      setError(`You only have ₹${budget} left in your budget`)
+      return
+    }
+    setLoading(true)
+    setError(null)
+    try {
+      await auctionApi.teamBid(session.id, parsed)
+      setAmount("")
+      setSuccess(true)
+      inputRef.current?.focus()
+    } catch (err) {
+      if (err.response?.status === 409) {
+        // Stale bid — someone else already bid higher
+        setOutbidDialog({ staleAmount: parsed, currentBid: err.response.data.currentBid })
+      } else {
+        setError(err.response?.data?.error ?? "Failed to place bid. Please try again.")
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function handleSubmit(e) {
+    e.preventDefault()
+    submitBid(amount)
+  }
+
+  function handleKeyDown(e) {
+    if (e.key === "Enter") submitBid(amount)
+  }
+
+  if (!hasPlayer) return null
+
+  return (
+    <>
+      {/* Outbid confirmation dialog */}
+      {outbidDialog && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-pitch-800 border border-surface-border rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <div className="flex items-start gap-3 mb-4">
+              <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-white font-semibold text-sm">Someone just bid ₹{outbidDialog.currentBid}</p>
+                <p className="text-slate-400 text-sm mt-1">
+                  Your bid of ₹{outbidDialog.staleAmount} is no longer valid.
+                  Do you still want to bid ₹{outbidDialog.staleAmount}?
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setOutbidDialog(null)}
+                className="flex-1 px-4 py-2 rounded-xl border border-surface-border text-slate-300 text-sm font-medium hover:bg-pitch-700 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={() => {
+                  const amt = outbidDialog.staleAmount
+                  setOutbidDialog(null)
+                  submitBid(amt)
+                }}
+                className="flex-1 px-4 py-2 rounded-xl bg-accent text-white text-sm font-bold hover:opacity-90 transition-opacity"
+              >
+                Yes, bid ₹{outbidDialog.staleAmount}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Bid panel */}
+      <div className={cn(
+        "rounded-2xl border p-5 space-y-4 transition-colors",
+        isMyTeamLeading
+          ? "border-emerald-500/40 bg-emerald-500/5"
+          : "border-surface-border bg-pitch-800/60"
+      )}>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <IndianRupee className="w-4 h-4 text-accent" />
+            <span className="text-sm font-bold text-white">Place Your Bid</span>
+          </div>
+          <span className={cn(
+            "text-xs font-semibold px-2 py-0.5 rounded-full border",
+            isMyTeamLeading
+              ? "text-emerald-400 border-emerald-500/40 bg-emerald-500/10"
+              : "text-slate-400 border-surface-border bg-pitch-900"
+          )}>
+            {isMyTeamLeading ? "🏆 You're leading" : `Budget: ₹${budget}`}
+          </span>
+        </div>
+
+        {isMyTeamLeading && (
+          <p className="text-xs text-slate-400">
+            Your team holds the top bid. You can still raise it if needed.
+            Budget remaining: <span className="text-white font-semibold">₹{budget}</span>
+          </p>
+        )}
+
+        <form onSubmit={handleSubmit} className="flex gap-2">
+          <div className="relative flex-1">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm font-mono">₹</span>
+            <input
+              ref={inputRef}
+              type="number"
+              min={minBid}
+              max={budget}
+              step={1}
+              value={amount}
+              onChange={e => { setAmount(e.target.value); setError(null) }}
+              onKeyDown={handleKeyDown}
+              placeholder={`Min ₹${minBid}`}
+              disabled={loading}
+              className={cn(
+                "w-full pl-7 pr-3 py-2.5 rounded-xl border bg-pitch-900 text-white font-mono text-sm",
+                "focus:outline-none focus:ring-2 focus:ring-accent/50 focus:border-accent",
+                "placeholder:text-slate-600 disabled:opacity-50 transition-colors",
+                error ? "border-rose-500/60" : "border-surface-border"
+              )}
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading || !amount}
+            className={cn(
+              "px-5 py-2.5 rounded-xl font-bold text-sm transition-all",
+              success
+                ? "bg-emerald-500 text-white"
+                : "bg-accent text-white hover:opacity-90",
+              "disabled:opacity-40 disabled:cursor-not-allowed"
+            )}
+          >
+            {loading ? "…" : success ? "✓ Bid placed!" : "Bid"}
+          </button>
+        </form>
+
+        {/* Quick-pick buttons */}
+        <div className="flex flex-wrap gap-2">
+          {[minBid, minBid + 5, minBid + 10, minBid + 25].filter(v => v <= budget).map(v => (
+            <button
+              key={v}
+              onClick={() => setAmount(String(v))}
+              className="text-xs px-3 py-1 rounded-lg bg-pitch-900 border border-surface-border text-slate-300 hover:border-accent/50 hover:text-white transition-colors font-mono"
+            >
+              ₹{v}
+            </button>
+          ))}
+        </div>
+
+        {error && (
+          <p className="text-xs text-rose-400 flex items-center gap-1.5">
+            <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+            {error}
+          </p>
+        )}
+      </div>
+    </>
+  )
+}
+
 function useIsDesktop() {
   const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024)
   useEffect(() => {
@@ -271,6 +481,7 @@ export default function TeamAuctionLive() {
   const bidBumping = useBumpOnChange(data?.session?.currentBid)
   useAuctionReveal(data, { showMilestoneBanners: false })
   useAuctionSocket()
+  const userRole = useAuthStore(s => s.user?.role)
 
   if (!data?.session) {
     return (
@@ -287,6 +498,7 @@ export default function TeamAuctionLive() {
   const { session, pool = [], sales = [], teams = [], retentions = [] } = data
   const teamNameById = Object.fromEntries(teams.map(t => [t.id, t.name]))
   const teamLogoById  = Object.fromEntries(teams.map(t => [t.id, t.logoUrl]))
+  const myTeam        = teams.find(t => t.id === myTeamId) ?? null
   // Players already on my team (bought or retained) — for squad fit calculation
   const myPlayerIds   = [
     ...sales.filter(s => s.teamId === myTeamId).map(s => s.playerId),
@@ -365,6 +577,11 @@ export default function TeamAuctionLive() {
 
           {/* Best Remaining Alert — flashes when top-MV player in pool changes */}
           <BestRemainingAlert pool={pool} />
+
+          {/* Team-owner bid panel — only shown to team_owner role */}
+          {userRole === "team_owner" && myTeam && (
+            <BidPanel session={session} myTeam={myTeam} />
+          )}
 
           <SmartAnalysis
             session={session}
