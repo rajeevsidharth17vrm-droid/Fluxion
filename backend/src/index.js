@@ -29,7 +29,6 @@ import teamTrophyRoutes    from "./routes/teamTrophies.js"
 import duoRoutes            from "./routes/duo.js"
 import specialEditionRoutes from "./routes/specialEditions.js"
 import uploadRoutes         from "./routes/upload.js"
-import tlgRoutes            from "./routes/tlg.js"
 import trendingRoutes      from "./routes/trending.js"
 import powerRankingRoutes  from "./routes/powerRankings.js"
 import seasonSummaryRoutes from "./routes/seasonSummaries.js"
@@ -87,7 +86,6 @@ app.use("/api/team-trophies",   teamTrophyRoutes)
 app.use("/api/duo",              duoRoutes)
 app.use("/api/special-editions", specialEditionRoutes)
 app.use("/api/upload", uploadRoutes)
-app.use("/api/tlg",    tlgRoutes)
 app.use("/api/trending",       trendingRoutes)
 app.use("/api/power-rankings", powerRankingRoutes)
 app.use("/api/season-summaries", seasonSummaryRoutes)

@@ -47,8 +47,8 @@ export const teamsApi = {
   playoffsTossChoice: (id, homeChoice) => api.post(`/teams/playoffs/${id}/toss/choice`, { homeChoice }).then(r => r.data),
   playoffsForceWinner:    (id, winnerId)              => api.post(`/teams/playoffs/${id}/force-winner`, { winnerId }).then(r => r.data),
   playoffsTiebreakerGet:  (id)                        => api.get(`/teams/playoffs/${id}/tiebreaker`).then(r => r.data),
-  playoffsTiebreakerSetup:(id, team1Players, team2Players) => api.post(`/teams/playoffs/${id}/tiebreaker`, { team1Players, team2Players }).then(r => r.data),
-  playoffsTiebreakerResults:(id, m1, m2, m3, m4, m5)  => api.post(`/teams/playoffs/${id}/tiebreaker/results`, { m1, m2, m3, m4, m5 }).then(r => r.data),
+  playoffsTiebreakerSetup:(id, format, team1Players, team2Players) => api.post(`/teams/playoffs/${id}/tiebreaker`, { format, team1Players, team2Players }).then(r => r.data),
+  playoffsTiebreakerResults:(id, m1, m2, m3, m4, m5)  => api.post(`/teams/playoffs/${id}/tiebreaker/results`, { m1, m2, m3, ...(m4 !== undefined && { m4 }), ...(m5 !== undefined && { m5 }) }).then(r => r.data),
   create:         (body)   => api.post("/teams", body).then(r => r.data),
   update:         (id, b)  => api.patch(`/teams/${id}`, b).then(r => r.data),
   updateSettings: (id, b)  => api.patch(`/teams/${id}/settings`, b).then(r => r.data),
@@ -178,10 +178,7 @@ export const fixturesApi = {
   recent:     ()                        => api.get("/fixtures/recent").then(r => r.data),
   create:     (body)                    => api.post("/fixtures", body).then(r => r.data),
   generateSeason: (body)                => api.post("/fixtures/generate", body).then(r => r.data),
-  changeFormat:   (format)              => api.patch("/fixtures/format", { format }).then(r => r.data),
-  getFormat:      ()                    => api.get("/fixtures/format").then(r => r.data),
   getFormatPublic:()                    => api.get("/fixtures/format/public").then(r => r.data),
-  groupStandings: ()                    => api.get("/fixtures/group-standings").then(r => r.data),
   update:     (id, body)                => api.patch(`/fixtures/${id}`, body).then(r => r.data),
   updateRoundDate: (round, date)        => api.patch(`/fixtures/round/${round}/date`, { date }).then(r => r.data),
   delete:     (id)                      => api.delete(`/fixtures/${id}`).then(r => r.data),
@@ -310,20 +307,6 @@ export async function uploadImage(file, folder = "general") {
   })
 }
 
-export const tlgApi = {
-  list:             ()                      => api.get("/tlg/list").then(r => r.data),
-  current:          ()                      => api.get("/tlg/current").then(r => r.data),
-  get:              (id)                    => api.get(`/tlg/${id}`).then(r => r.data),
-  create:           ()                      => api.post("/tlg", {}).then(r => r.data),
-  draw:             (id, teamIds)           => api.post(`/tlg/${id}/draw`, { teamIds }).then(r => r.data),
-  saveFixture:      (id, homeScore, awayScore, isWalkover) =>
-    api.patch(`/tlg/fixtures/${id}`, { homeScore, awayScore, isWalkover }).then(r => r.data),
-  clearFixture:     (id)                   => api.delete(`/tlg/fixtures/${id}/result`).then(r => r.data),
-  generateKnockout: (id)                   => api.post(`/tlg/${id}/generate-knockout`).then(r => r.data),
-  saveKnockout:     (phase, seasonId, homeScore, awayScore, isWalkover) =>
-    api.patch(`/tlg/knockout/${phase}`, { seasonId, homeScore, awayScore, isWalkover }).then(r => r.data),
-  delete:           (id)                   => api.delete(`/tlg/${id}`).then(r => r.data),
-}
 
 export const teamKnockoutApi = {
   current:       ()                          => api.get("/team-knockout/current").then(r => r.data),

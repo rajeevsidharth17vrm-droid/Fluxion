@@ -1547,26 +1547,13 @@ router.post("/season-reset", authenticate, adminOnly, async (req, res, next) => 
       console.log(`[season-reset] Championship trophy awarded to all players of team ${champWinnerTeamId}`)
     }
 
-    // Determine relegated team — use the result of the seventh_place TLG
-    // knockout match (stored in app_settings) rather than blindly relegating
-    // the bottom 2 by league position. The 7th/8th place playoff loser is the
-    // true relegated team; the winner survives regardless of league finish.
+    // Determine relegated team — bottom team by league position is relegated
     const playedTeams = standingsRes.rows
-    const relegationCutoff = playedTeams.length >= 8 ? playedTeams.length : null
-
-    const relegatedRes = await query(
-      "SELECT value FROM app_settings WHERE key = 'tlg_relegated_team_id'"
-    )
-    const relegatedTeamId = relegatedRes.rows[0]?.value
-      ? parseInt(relegatedRes.rows[0].value)
-      : null
+    const relegationCutoff = playedTeams.length >= 2 ? playedTeams.length : null
 
     for (const team of playedTeams) {
-      // If a relegation playoff was played, only the actual loser is relegated.
-      // Fall back to bottom-2-by-position only when no playoff result exists.
-      const relegated = relegatedTeamId
-        ? team.team_id === relegatedTeamId
-        : (relegationCutoff ? team.league_pos === relegationCutoff : false)
+      // Bottom team by final league position is relegated
+      const relegated = relegationCutoff ? team.league_pos === relegationCutoff : false
       await query(`
         INSERT INTO team_season_history
           (team_id, season_number, year, team_league_pos, championship_pos, relegated)
@@ -1686,6 +1673,7 @@ router.post("/season-delete", authenticate, adminOnly, async (req, res, next) =>
       CREATE TABLE IF NOT EXISTS team_league_playoff_tiebreakers (
         id                SERIAL PRIMARY KEY,
         playoff_match_id  INT NOT NULL UNIQUE REFERENCES team_league_playoffs(id) ON DELETE CASCADE,
+        format            INT DEFAULT 5,
         team1_p1_id INT REFERENCES players(id), team1_p2_id INT REFERENCES players(id), team1_p3_id INT REFERENCES players(id), team1_p4_id INT REFERENCES players(id), team1_p5_id INT REFERENCES players(id),
         team2_p1_id INT REFERENCES players(id), team2_p2_id INT REFERENCES players(id), team2_p3_id INT REFERENCES players(id), team2_p4_id INT REFERENCES players(id), team2_p5_id INT REFERENCES players(id),
         m1_p1_id INT REFERENCES players(id), m1_p2_id INT REFERENCES players(id), m1_p1_pts INT, m1_p2_pts INT,
@@ -1696,6 +1684,7 @@ router.post("/season-delete", authenticate, adminOnly, async (req, res, next) =>
         status TEXT DEFAULT 'setup'
       )
     `)
+    await query("ALTER TABLE team_league_playoff_tiebreakers ADD COLUMN IF NOT EXISTS format INT DEFAULT 5")
   } catch (e) { console.error("[teams] tiebreaker migration:", e.message) }
 })()
 
@@ -1763,8 +1752,8 @@ router.post("/playoffs/generate", authenticate, adminOnly, async (req, res, next
 
     const generated = await generatePlayoffs(season)
     if (!generated) {
-      // generatePlayoffs returns false if fewer than 4 teams exist
-      return res.status(400).json({ error: "Fewer than 4 teams found in standings. Cannot generate playoffs." })
+      // generatePlayoffs returns false if fewer than 5 teams exist
+      return res.status(400).json({ error: "Fewer than 5 teams found in standings. Cannot generate playoffs." })
     }
 
     const result = await query(PLAYOFF_SELECT + " WHERE p.season_number = $1 ORDER BY p.id", [season])
@@ -1797,96 +1786,25 @@ router.patch("/playoffs/:id/result", authenticate, adminOnly, async (req, res, n
       [team1Score, team2Score, winnerId, match.id]
     )
 
+    // With 2-leg tiebreaker flow, bracket advancement is handled by leaguePlayoffLogic.js
+    // This route is a manual override for direct single-match score entry.
     if (match.match_type === "qualifier1") {
-      // Winner → Final (team1 slot), loser → Qualifier 2 (team1 slot)
-      await query("UPDATE team_league_playoffs SET team1_id=$1 WHERE season_number=$2 AND match_type='final'", [winnerId, match.season_number])
-      await query("UPDATE team_league_playoffs SET team1_id=$1 WHERE season_number=$2 AND match_type='qualifier2'", [loserId, match.season_number])
+      // Winner → Grand Final (team1 slot), loser → Challenger Final (team1 slot)
+      await query("UPDATE team_league_playoffs SET team1_id=$1 WHERE season_number=$2 AND match_type='grand_final'", [winnerId, match.season_number])
+      await query("UPDATE team_league_playoffs SET team1_id=$1 WHERE season_number=$2 AND match_type='challenger_final'", [loserId, match.season_number])
     } else if (match.match_type === "eliminator") {
-      // Winner → Qualifier 2 (team2 slot), loser eliminated (4th place)
+      // Winner → Qualifier 2 (team2 slot), loser eliminated (5th place)
       await query("UPDATE team_league_playoffs SET team2_id=$1 WHERE season_number=$2 AND match_type='qualifier2'", [winnerId, match.season_number])
     } else if (match.match_type === "qualifier2") {
-      // Winner → Final (team2 slot), loser eliminated (3rd place)
-      await query("UPDATE team_league_playoffs SET team2_id=$1 WHERE season_number=$2 AND match_type='final'", [winnerId, match.season_number])
-    } else if (match.match_type === "final") {
-      // Champion decided — award season BDR based on the PLAYOFF result,
-      // not raw group-stage standings. Only ever fires once per season.
-      if (await claimAward("team_league_season", match.season_number)) {
-        const eliminatorRes = await query(
-          "SELECT winner_team_id, team1_id, team2_id FROM team_league_playoffs WHERE season_number=$1 AND match_type='eliminator'",
-          [match.season_number]
-        )
-        const elim = eliminatorRes.rows[0]
-        const fourthPlaceId = elim.winner_team_id === elim.team1_id ? elim.team2_id : elim.team1_id
-
-        const qualifier2Res = await query(
-          "SELECT winner_team_id, team1_id, team2_id FROM team_league_playoffs WHERE season_number=$1 AND match_type='qualifier2'",
-          [match.season_number]
-        )
-        const q2 = qualifier2Res.rows[0]
-        const thirdPlaceId = q2.winner_team_id === q2.team1_id ? q2.team2_id : q2.team1_id
-
-        const placements = [
-          { teamId: winnerId,      bdr: 12, flatPts: 12, label: "Team League Champion"  },
-          { teamId: loserId,       bdr: 9,  flatPts: 9,  label: "Team League Runner-up" },
-          { teamId: thirdPlaceId,  bdr: 7,  flatPts: 7,  label: "Team League 3rd Place" },
-          { teamId: fourthPlaceId, bdr: 5,  flatPts: 5,  label: "Team League 4th Place" },
-        ]
-        for (const { teamId, bdr, flatPts, label } of placements) {
-          const playersRes = await query("SELECT id FROM players WHERE team_id = $1", [teamId])
-          for (const p of playersRes.rows) {
-            await addBdrWithLabel(p.id, bdr, label)
-            await addLeagueBdr(p.id, bdr) // track league BDR separately
-          }
-          await addTeamChampionshipPts(teamId, flatPts) // flat team pts
-        }
-      }
-
-      // Trophy awards — re-checked EVERY time the Final's result is saved
-      // (not gated by claimAward above), so correcting a wrong Final result
-      // later automatically reverts the wrong team's roster and reassigns
-      // the trophy to the actual correct champion's current roster.
-      const rosterRes = await query("SELECT id FROM players WHERE team_id = $1", [winnerId])
-      await reconcileTrophyRoster({
-        sourceKey: `league-knockout-final-s${match.season_number}`,
-        trophyColumn: "trophy2_count",
-        playerIds: rosterRes.rows.map(r => r.id),
-        seasonNumber: match.season_number,
-      })
-
-      const topScorerRes = await query(`
-        SELECT p.id,
-          COALESCE(SUM(CASE WHEN mr.player_id=p.id THEN mr.player_score WHEN mr.opponent_id=p.id THEN mr.opponent_score ELSE 0 END),0) AS goals,
-          COALESCE(SUM(CASE WHEN mr.player_id=p.id THEN mr.opponent_score WHEN mr.opponent_id=p.id THEN mr.player_score ELSE 0 END),0) AS conceded
-        FROM players p
-        LEFT JOIN match_records mr ON (mr.player_id=p.id OR mr.opponent_id=p.id) AND mr.match_type='league'
-        GROUP BY p.id
-        ORDER BY goals DESC, conceded ASC
-        LIMIT 1
-      `)
-      const topScorer = topScorerRes.rows[0]
-      await awardOrReassignTrophy({
-        sourceKey: `team_league_golden_boot_season_${match.season_number}`,
-        trophyColumn: "trophy6_count",
-        playerId: topScorer?.goals > 0 ? topScorer.id : null,
-        seasonNumber: match.season_number,
-      })
-
-      // ── Auto-award Team League trophy to winning team (league+knockout format) ──
-      await reconcileTeamTrophy({
-        tournament:   "team_league",
-        teamId:       winnerId,
-        seasonNumber: match.season_number,
-      })
-
-      // ── Auto-fill season record — team league winner (playoff format) ──────
-      const winnerTeamRes = await query("SELECT name FROM teams WHERE id = $1", [winnerId])
-      const winnerPlayerNames = rosterRes.rows.length > 0
-        ? (await query("SELECT name FROM players WHERE team_id = $1", [winnerId])).rows.map(r => r.name)
-        : []
-      await updateSeasonRecord(match.season_number, {
-        team_league_winner:  winnerTeamRes.rows[0]?.name ?? null,
-        team_league_players: winnerPlayerNames,
-      })
+      // Winner → Challenger Final (team2 slot), loser eliminated (4th place)
+      await query("UPDATE team_league_playoffs SET team2_id=$1 WHERE season_number=$2 AND match_type='challenger_final'", [winnerId, match.season_number])
+    } else if (match.match_type === "challenger_final") {
+      // Winner → Grand Final (team2 slot), loser eliminated (3rd place)
+      await query("UPDATE team_league_playoffs SET team2_id=$1 WHERE season_number=$2 AND match_type='grand_final'", [winnerId, match.season_number])
+    } else if (match.match_type === "grand_final") {
+      // Champion decided — delegate to advanceLeaguePlayoffWinner for BDR + trophies
+      const { advanceLeaguePlayoffWinner } = await import("../services/leaguePlayoffLogic.js")
+      await advanceLeaguePlayoffWinner(match, winnerId)
     }
 
     const fresh = await query(PLAYOFF_SELECT + " WHERE p.id = $1", [match.id])
@@ -1931,7 +1849,7 @@ router.post("/playoffs/:id/toss/choice", authenticate, adminOnly, async (req, re
     const leg2Away = homeChoice === "leg1" ? tossWinner : otherTeam
 
     // Use rounds 15-22 for playoff legs (after league's round 14)
-    const ROUND_MAP = { qualifier1: [15,16], eliminator: [17,18], qualifier2: [19,20], final: [21,22] }
+    const ROUND_MAP = { qualifier1: [15,16], eliminator: [17,18], qualifier2: [19,20], challenger_final: [21,22], grand_final: [23,24] }
     const [leg1Round, leg2Round] = ROUND_MAP[match.match_type] || [15, 16]
     const today = new Date().toISOString().split("T")[0]
 
@@ -1988,15 +1906,18 @@ router.get("/playoffs/:id/tiebreaker", authenticate, adminOnly, async (req, res,
   } catch (err) { next(err) }
 })
 
-// POST /api/teams/playoffs/:id/tiebreaker — admin submits 5 players from each team;
-// system randomly creates 5 × 1v1 matchups
+// POST /api/teams/playoffs/:id/tiebreaker — admin picks format (3 or 5) and submits players;
+// system randomly creates N × 1v1 matchups
 router.post("/playoffs/:id/tiebreaker", authenticate, adminOnly, async (req, res, next) => {
   try {
     const schema = z.object({
-      team1Players: z.array(z.number().int().positive()).length(5),
-      team2Players: z.array(z.number().int().positive()).length(5),
+      format:       z.literal(3).or(z.literal(5)),
+      team1Players: z.array(z.number().int().positive()).min(3).max(5),
+      team2Players: z.array(z.number().int().positive()).min(3).max(5),
+    }).refine(d => d.team1Players.length === d.format && d.team2Players.length === d.format, {
+      message: "Player array length must match format (3 for 3v3, 5 for 5v5)",
     })
-    const { team1Players, team2Players } = schema.parse(req.body)
+    const { format, team1Players, team2Players } = schema.parse(req.body)
     const matchId = parseInt(req.params.id)
 
     const matchRes = await query("SELECT * FROM team_league_playoffs WHERE id = $1", [matchId])
@@ -2007,16 +1928,21 @@ router.post("/playoffs/:id/tiebreaker", authenticate, adminOnly, async (req, res
     // Randomly shuffle team2 players to create matchups
     const t2Shuffled = [...team2Players].sort(() => Math.random() - 0.5)
 
+    // Pad to 5 slots (nulls for unused slots in 3v3)
+    const t1 = [...team1Players, null, null, null, null, null].slice(0, 5)
+    const t2 = [...t2Shuffled,   null, null, null, null, null].slice(0, 5)
+
     await query(`
       INSERT INTO team_league_playoff_tiebreakers
-        (playoff_match_id,
+        (playoff_match_id, format,
          team1_p1_id, team1_p2_id, team1_p3_id, team1_p4_id, team1_p5_id,
          team2_p1_id, team2_p2_id, team2_p3_id, team2_p4_id, team2_p5_id,
          m1_p1_id, m1_p2_id, m2_p1_id, m2_p2_id, m3_p1_id, m3_p2_id, m4_p1_id, m4_p2_id, m5_p1_id, m5_p2_id,
          status)
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
+      VALUES ($1, $12, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11,
               $2,$7, $3,$8, $4,$9, $5,$10, $6,$11, 'pending_results')
       ON CONFLICT (playoff_match_id) DO UPDATE SET
+        format=$12,
         team1_p1_id=$2, team1_p2_id=$3, team1_p3_id=$4, team1_p4_id=$5, team1_p5_id=$6,
         team2_p1_id=$7, team2_p2_id=$8, team2_p3_id=$9, team2_p4_id=$10, team2_p5_id=$11,
         m1_p1_id=$2, m1_p2_id=$7,
@@ -2030,9 +1956,8 @@ router.post("/playoffs/:id/tiebreaker", authenticate, adminOnly, async (req, res
         m4_p1_pts=NULL, m4_p2_pts=NULL,
         m5_p1_pts=NULL, m5_p2_pts=NULL,
         status='pending_results'
-    `, [matchId,
-        team1Players[0], team1Players[1], team1Players[2], team1Players[3], team1Players[4],
-        t2Shuffled[0],   t2Shuffled[1],   t2Shuffled[2],  t2Shuffled[3],   t2Shuffled[4]])
+    `, [matchId, t1[0], t1[1], t1[2], t1[3], t1[4],
+                 t2[0], t2[1], t2[2], t2[3], t2[4], format])
 
     const tb = await query(`
       SELECT tb.*,
@@ -2058,15 +1983,16 @@ router.post("/playoffs/:id/tiebreaker", authenticate, adminOnly, async (req, res
   } catch (err) { next(err) }
 })
 
-// POST /api/teams/playoffs/:id/tiebreaker/results — admin submits 5 × pts pairs
+// POST /api/teams/playoffs/:id/tiebreaker/results — admin submits N × pts pairs (3 or 5)
 router.post("/playoffs/:id/tiebreaker/results", authenticate, adminOnly, async (req, res, next) => {
   try {
+    const ptsPair = z.object({ p1Pts: z.number().int().min(0), p2Pts: z.number().int().min(0) })
     const schema = z.object({
-      m1: z.object({ p1Pts: z.number().int().min(0), p2Pts: z.number().int().min(0) }),
-      m2: z.object({ p1Pts: z.number().int().min(0), p2Pts: z.number().int().min(0) }),
-      m3: z.object({ p1Pts: z.number().int().min(0), p2Pts: z.number().int().min(0) }),
-      m4: z.object({ p1Pts: z.number().int().min(0), p2Pts: z.number().int().min(0) }),
-      m5: z.object({ p1Pts: z.number().int().min(0), p2Pts: z.number().int().min(0) }),
+      m1: ptsPair,
+      m2: ptsPair,
+      m3: ptsPair,
+      m4: ptsPair.optional(),
+      m5: ptsPair.optional(),
     })
     const { m1, m2, m3, m4, m5 } = schema.parse(req.body)
     const matchId = parseInt(req.params.id)
@@ -2076,17 +2002,22 @@ router.post("/playoffs/:id/tiebreaker/results", authenticate, adminOnly, async (
     if (!tb) return res.status(404).json({ error: "Tiebreaker not set up yet" })
     if (tb.status === "completed") return res.status(400).json({ error: "Tiebreaker already completed" })
 
+    const fmt = tb.format || 5
+    // For 3v3, m4/m5 default to 0-0 (they're unused null-player slots)
+    const rm4 = fmt === 5 ? (m4 ?? { p1Pts: 0, p2Pts: 0 }) : { p1Pts: 0, p2Pts: 0 }
+    const rm5 = fmt === 5 ? (m5 ?? { p1Pts: 0, p2Pts: 0 }) : { p1Pts: 0, p2Pts: 0 }
+
     await query(`
       UPDATE team_league_playoff_tiebreakers
       SET m1_p1_pts=$1, m1_p2_pts=$2, m2_p1_pts=$3, m2_p2_pts=$4, m3_p1_pts=$5, m3_p2_pts=$6,
           m4_p1_pts=$7, m4_p2_pts=$8, m5_p1_pts=$9, m5_p2_pts=$10, status='completed'
       WHERE playoff_match_id=$11
     `, [m1.p1Pts, m1.p2Pts, m2.p1Pts, m2.p2Pts, m3.p1Pts, m3.p2Pts,
-        m4.p1Pts, m4.p2Pts, m5.p1Pts, m5.p2Pts, matchId])
+        rm4.p1Pts, rm4.p2Pts, rm5.p1Pts, rm5.p2Pts, matchId])
 
-    // Determine winner by team1 total pts vs team2 total pts
-    const team1Total = m1.p1Pts + m2.p1Pts + m3.p1Pts + m4.p1Pts + m5.p1Pts
-    const team2Total = m1.p2Pts + m2.p2Pts + m3.p2Pts + m4.p2Pts + m5.p2Pts
+    // Determine winner by team1 total pts vs team2 total pts (only active matchups)
+    const team1Total = m1.p1Pts + m2.p1Pts + m3.p1Pts + (fmt === 5 ? (rm4.p1Pts + rm5.p1Pts) : 0)
+    const team2Total = m1.p2Pts + m2.p2Pts + m3.p2Pts + (fmt === 5 ? (rm4.p2Pts + rm5.p2Pts) : 0)
 
     const matchRes = await query("SELECT * FROM team_league_playoffs WHERE id = $1", [matchId])
     const match = matchRes.rows[0]
@@ -2098,17 +2029,17 @@ router.post("/playoffs/:id/tiebreaker/results", authenticate, adminOnly, async (
     const winnerId = team1Total > team2Total ? match.team1_id : match.team2_id
     await query("UPDATE team_league_playoffs SET winner_team_id = $1, status = 'completed' WHERE id = $2", [winnerId, matchId])
 
-    // ── Save each of the 5 tiebreaker 1v1s to match_records ──────────────────
+    // ── Save each tiebreaker 1v1 to match_records ─────────────────────────────
     const season = match.season_number
     const tbFull = (await query("SELECT * FROM team_league_playoff_tiebreakers WHERE playoff_match_id = $1", [matchId])).rows[0]
-    const matchups = [
-      { p1Id: tbFull.m1_p1_id, p2Id: tbFull.m1_p2_id, p1Pts: m1.p1Pts, p2Pts: m1.p2Pts },
-      { p1Id: tbFull.m2_p1_id, p2Id: tbFull.m2_p2_id, p1Pts: m2.p1Pts, p2Pts: m2.p2Pts },
-      { p1Id: tbFull.m3_p1_id, p2Id: tbFull.m3_p2_id, p1Pts: m3.p1Pts, p2Pts: m3.p2Pts },
-      { p1Id: tbFull.m4_p1_id, p2Id: tbFull.m4_p2_id, p1Pts: m4.p1Pts, p2Pts: m4.p2Pts },
-      { p1Id: tbFull.m5_p1_id, p2Id: tbFull.m5_p2_id, p1Pts: m5.p1Pts, p2Pts: m5.p2Pts },
+    const allMatchups = [
+      { p1Id: tbFull.m1_p1_id, p2Id: tbFull.m1_p2_id, p1Pts: m1.p1Pts,   p2Pts: m1.p2Pts   },
+      { p1Id: tbFull.m2_p1_id, p2Id: tbFull.m2_p2_id, p1Pts: m2.p1Pts,   p2Pts: m2.p2Pts   },
+      { p1Id: tbFull.m3_p1_id, p2Id: tbFull.m3_p2_id, p1Pts: m3.p1Pts,   p2Pts: m3.p2Pts   },
+      { p1Id: tbFull.m4_p1_id, p2Id: tbFull.m4_p2_id, p1Pts: rm4.p1Pts,  p2Pts: rm4.p2Pts  },
+      { p1Id: tbFull.m5_p1_id, p2Id: tbFull.m5_p2_id, p1Pts: rm5.p1Pts,  p2Pts: rm5.p2Pts  },
     ]
-    for (const mu of matchups) {
+    for (const mu of allMatchups) {
       if (!mu.p1Id || !mu.p2Id) continue
       const p1Result = mu.p1Pts > mu.p2Pts ? "win" : mu.p1Pts < mu.p2Pts ? "loss" : "draw"
       const p2Result = mu.p2Pts > mu.p1Pts ? "win" : mu.p2Pts < mu.p1Pts ? "loss" : "draw"
@@ -2116,12 +2047,10 @@ router.post("/playoffs/:id/tiebreaker/results", authenticate, adminOnly, async (
       const p2GradeRes = await query("SELECT grade FROM players WHERE id=$1", [mu.p2Id])
       const p1Grade = p1GradeRes.rows[0]?.grade || "C"
       const p2Grade = p2GradeRes.rows[0]?.grade || "C"
-      // Insert p1's perspective
       await query(`
         INSERT INTO match_records (player_id, opponent_id, result, opponent_grade, match_type, player_score, opponent_score, recorded_at, season_number)
         VALUES ($1,$2,$3,$4,'playoff_tiebreaker',$5,$6,NOW(),$7)
       `, [mu.p1Id, mu.p2Id, p1Result, p2Grade, mu.p1Pts, mu.p2Pts, season])
-      // Insert p2's perspective
       await query(`
         INSERT INTO match_records (player_id, opponent_id, result, opponent_grade, match_type, player_score, opponent_score, recorded_at, season_number)
         VALUES ($1,$2,$3,$4,'playoff_tiebreaker',$5,$6,NOW(),$7)

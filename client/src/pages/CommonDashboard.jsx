@@ -28,7 +28,6 @@ import ChampionshipCelebration from "../components/common/ChampionshipCelebratio
 import DuoWinnerCelebration from "../components/common/DuoWinnerCelebration"
 import weeklyTrophyLogo from "../../images/Weekly.png"
 import teamLeagueTrophyLogo from "../../images/Team League.png"
-import europaTrophyLogo      from "../../images/europa.png"
 import duoTrophyLogo          from "../../images/duo.png"
 import revolutionTrophyLogo   from "../../images/revolution.png"
 import uclTrophyLogo from "../../images/ucl.png"
@@ -36,7 +35,7 @@ import goldenBootLogo from "../../images/Golden Boot.png"
 import ballonDorTrophy from "../../images/ballondor.png"
 import championshipTrophy from "../../images/championship.png"
 import teamsImg from "../../images/teams.jpg"
-import { useTeams, usePlayers, useSeasonRecords, useSettings, useWeeklyCurrent, useFixtures, useUclKnockoutCurrent, useTopScorers, useUclTopScorers, useWeeklyTopScorers, useBestLeaguePerformer, useTeamLeaguePlayoffs, useAuctionCurrent, useLeagueFormatPublic, useChampionship, useGroupStandings, useTeamKnockoutCurrent, useRevolutionCurrent } from "../lib/queries"
+import { useTeams, usePlayers, useSeasonRecords, useSettings, useWeeklyCurrent, useFixtures, useUclKnockoutCurrent, useTopScorers, useUclTopScorers, useWeeklyTopScorers, useBestLeaguePerformer, useTeamLeaguePlayoffs, useAuctionCurrent, useLeagueFormatPublic, useChampionship, useTeamKnockoutCurrent, useRevolutionCurrent } from "../lib/queries"
 import { useAuctionSocket } from "../hooks/useAuctionSocket"
 import WeeklyCelebrationOverlay from "../components/dashboard/WeeklyCelebrationOverlay"
 
@@ -298,12 +297,8 @@ export default function CommonDashboard() {
   // actual champion isn't decided until the Final itself is played).
   const [showTeamCelebration, setShowTeamCelebration] = useState(false)
   const teamCelebrationSeason = settings.current_season
-  const [showEuropaCelebration, setShowEuropaCelebration] = useState(false)
   const { data: playoffsData }   = useTeamLeaguePlayoffs()
   const { data: leagueFormatData, isLoading: leagueFormatLoading } = useLeagueFormatPublic()
-  const isLeagueOnly    = leagueFormatData?.format === "league"
-  const isGroupKnockout = leagueFormatData?.format === "group_knockout"
-  const { data: groupStandings }   = useGroupStandings()
   const { data: revolutionData }   = useRevolutionCurrent()
   const [showRevCelebration, setShowRevCelebration]   = useState(false)
   const [testRevDismissed, setTestRevDismissed]        = useState(false)
@@ -358,26 +353,10 @@ export default function CommonDashboard() {
   const sortCaptainFirst = (list) =>
     [...list].sort((a, b) => (b.isCaptain ? 1 : 0) - (a.isCaptain ? 1 : 0))
 
-  // For group_knockout format — read champion from team knockout Champions Final
   const { data: teamKOData, isLoading: teamKOLoading } = useTeamKnockoutCurrent()
-  const knockoutChampsFinal  = teamKOData?.matches?.find(m => m.match_type === "champions_final")
-  const knockoutChampion     = knockoutChampsFinal?.status === "completed" ? knockoutChampsFinal?.winner_id : null
 
-  // Europa Final winner (group_knockout format)
-  const knockoutEuropaFinal   = teamKOData?.matches?.find(m => m.match_type === "europa_final")
-  const knockoutEuropaWinnerId = knockoutEuropaFinal?.status === "completed" ? knockoutEuropaFinal?.winner_id : null
-  const europaChampion        = knockoutEuropaWinnerId ? teams.find(t => t.id === knockoutEuropaWinnerId) : null
-  const europaChampionPlayers = europaChampion ? sortCaptainFirst(players.filter(p => p.teamId === europaChampion.id)) : []
-
-  // Champion detection — works for all formats:
-  // Group+Knockout: read from team_knockout_matches Champions Final
-  // League+Knockout: read from the playoff Final winner
-  // League Only: read the stored champion team ID from app_settings
-  const championTeamId = isGroupKnockout
-    ? knockoutChampion
-    : isLeagueOnly
-      ? (leagueFormatData?.leagueOnlyChampionTeamId || null)
-      : (playoffComplete ? playoffFinal.winnerTeamId : null)
+  // Champion detection — League+Knockout format: read from the playoff Final winner
+  const championTeamId = playoffComplete ? playoffFinal.winnerTeamId : null
   const teamChampion = championTeamId ? teams.find(t => t.id === championTeamId) : null
 
   const teamChampionPlayers = teamChampion
@@ -542,7 +521,7 @@ export default function CommonDashboard() {
   // Plays them one by one — marks as seen only when each actually dismisses.
   const [celebQueue, setCelebQueue] = useState(null)
   const [celebIndex, setCelebIndex] = useState(0)
-  const queueReady = !teamsLoading && !playersLoading && !leagueFormatLoading && !teamKOLoading
+  const queueReady = !teamsLoading && !playersLoading && !teamKOLoading
 
   const dismissCelebration = () => {
     if (!celebQueue || celebIndex >= celebQueue.length) return
@@ -571,15 +550,9 @@ export default function CommonDashboard() {
     // 2. Team Champion (48h)
     if (teamChampion && teamCelebrationSeason) {
       const k = `team_league_champion_seen_${teamCelebrationSeason}_${teamChampion.id}`
-      const at = isGroupKnockout ? knockoutChampsFinal?.completed_at : settings["league_champion_completed_at"]
+      const at = settings["league_champion_completed_at"]
       if (!localStorage.getItem(k) && isWithinCelebrationWindow(at, 48))
         entries.push({ key: k, setter: setShowTeamCelebration })
-    }
-    // 3. Europa Champion (48h)
-    if (europaChampion && teamCelebrationSeason) {
-      const k = `europa_champion_seen_${teamCelebrationSeason}_${europaChampion.id}`
-      if (!localStorage.getItem(k) && isWithinCelebrationWindow(knockoutEuropaFinal?.completed_at, 48))
-        entries.push({ key: k, setter: setShowEuropaCelebration })
     }
     // 4. UCL (24h)
     if (uclChampion && uclKnockout?.id) {
@@ -613,7 +586,7 @@ export default function CommonDashboard() {
     setCelebQueue(entries)
     if (entries.length > 0) entries[0].setter(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [queueReady, teamChampion?.id, europaChampion?.id, revChampion?.id,
+  }, [queueReady, teamChampion?.id, revChampion?.id,
       duoChampion?.set1Name, uclChampion, weeklyChampion, settings])
 
   // Auto-dismiss timer for current celebration
@@ -749,19 +722,6 @@ export default function CommonDashboard() {
           anthemUrl={displayTeamAnthem}
           onDismiss={() => setShowTeamCelebration(false)}
         />
-      ) : showEuropaCelebration && europaChampion ? (
-        <ChampionCelebration
-          trophyImage={europaTrophyLogo}
-          eyebrow="Europa Championship"
-          title={europaChampion.name}
-          subtitle="are the Europa Champions! 🥈"
-          badgeImage={europaChampion.logoUrl}
-          onClick={dismissCelebration}
-        >
-          {europaChampionPlayers.length > 0 && (
-            <TeamRosterChips players={europaChampionPlayers} />
-          )}
-        </ChampionCelebration>
       ) : showUclCelebration && displayUclChampion ? (
         <ChampionCelebration
           trophyImage={uclTrophyLogo}
@@ -893,32 +853,13 @@ export default function CommonDashboard() {
           {isCurrent ? (
             <>
               <p className="text-slate-400 text-sm">{teams.length} teams · {players.length} players</p>
-              {isGroupKnockout ? (
-                // Group+Knockout format — show each group's leader separately
-                (groupStandings?.A?.[0] || groupStandings?.B?.[0]) && (
-                  <div className="mt-4 flex flex-wrap items-center gap-2">
-                    <span className="text-xs text-slate-500">Group leaders</span>
-                    {groupStandings?.A?.[0] && (
-                      <span className="text-xs font-semibold text-white bg-accent/15 border border-accent/25 px-2 py-0.5 rounded-full">
-                        A: {groupStandings.A[0].teamName} · {groupStandings.A[0].pts} pts
-                      </span>
-                    )}
-                    {groupStandings?.B?.[0] && (
-                      <span className="text-xs font-semibold text-white bg-accent/15 border border-accent/25 px-2 py-0.5 rounded-full">
-                        B: {groupStandings.B[0].teamName} · {groupStandings.B[0].pts} pts
-                      </span>
-                    )}
-                  </div>
-                )
-              ) : (
-                teams[0] && (
-                  <div className="mt-4 flex items-center gap-2">
-                    <span className="text-xs text-slate-500">League leader</span>
-                    <span className="text-xs font-semibold text-white bg-accent/15 border border-accent/25 px-2 py-0.5 rounded-full">
-                      {teams[0].name} · {teams[0].points} pts
-                    </span>
-                  </div>
-                )
+              {teams[0] && (
+                <div className="mt-4 flex items-center gap-2">
+                  <span className="text-xs text-slate-500">League leader</span>
+                  <span className="text-xs font-semibold text-white bg-accent/15 border border-accent/25 px-2 py-0.5 rounded-full">
+                    {teams[0].name} · {teams[0].points} pts
+                  </span>
+                </div>
               )}
             </>
           ) : (

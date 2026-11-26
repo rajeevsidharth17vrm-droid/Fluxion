@@ -107,11 +107,7 @@ function TeamRow({ team, rank }) {
           {team.leaguePts > 0 && (
             <div className="flex items-center justify-between px-5 py-2 border-t border-surface-border/40">
               <p className="text-xs text-slate-500 italic">
-                {team.leaguePts === 12 ? "TLG Champion" :
-                 team.leaguePts === 9  ? "TLG Runner-up" :
-                 team.leaguePts === 7  ? "TLG 3rd Place" :
-                 team.leaguePts === 5  ? "TLG 4th Place" :
-                 team.leaguePts === 4  ? "TLG Europa Winner" : "TLG"} (team award)
+                Team League (team award)
               </p>
               <p className="text-xs font-bold text-accent">+{team.leaguePts}</p>
             </div>

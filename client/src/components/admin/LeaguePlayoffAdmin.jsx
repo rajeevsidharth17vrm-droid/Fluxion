@@ -1,10 +1,9 @@
 // components/admin/LeaguePlayoffAdmin.jsx
-// Admin panel for the league_knockout format playoffs (Q1 → Eliminator → Q2 → Final)
-// 2-leg coin toss flow + 3v3 tiebreaker if level
+// Admin panel for the league_knockout format playoffs (Top 5 · Double-Chance)
+// 5 rounds · 2-leg coin toss · 3v3 or 5v5 tiebreaker if aggregate level
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { Trophy, Trash2, RefreshCw, CheckCircle, Coins, Shuffle, Layers, Crown } from "lucide-react"
+import { Trophy, Trash2, RefreshCw, CheckCircle, Coins, Shuffle, Crown } from "lucide-react"
 import {
   useTeamLeaguePlayoffs,
   useGenerateLeaguePlayoffs,
@@ -18,35 +17,26 @@ import {
 import { usePlayers } from "../../lib/queries"
 import { TeamAvatar } from "../common/TeamLogo"
 import { cn } from "../../lib/utils"
-import api from "../../lib/api"
 
 const MATCH_LABELS = {
-  qualifier1:         "Qualifier 1  (1st vs 2nd)",
-  eliminator:         "Eliminator   (3rd vs 4th)",
-  qualifier2:         "Qualifier 2  (Q1 loser vs Eliminator winner)",
-  final:              "Final        (Q1 winner vs Q2 winner)",
-  europa_qualifier1:  "Europa Q1    (5th vs 6th)",
-  europa_eliminator:  "Europa Eliminator  (7th vs 8th)  — loser relegated",
-  europa_qualifier2:  "Europa Q2    (EQ1 loser vs Elim winner)",
-  europa_final:       "Europa Final (EQ1 winner vs EQ2 winner)",
+  qualifier1:      "Qualifier 1  (1st vs 2nd)",
+  eliminator:      "Eliminator   (4th vs 5th)",
+  qualifier2:      "Qualifier 2  (3rd vs Eliminator winner)",
+  challenger_final:"Challenger Final  (Q1 loser vs Q2 winner)",
+  grand_final:     "Grand Final  (Q1 winner vs CF winner)",
 }
 
 const MATCH_COLORS = {
-  qualifier1:        "border-gold/40 bg-gold/5",
-  eliminator:        "border-violet-500/30 bg-violet-500/5",
-  qualifier2:        "border-sky-500/30 bg-sky-500/5",
-  final:             "border-emerald-500/40 bg-emerald-500/5",
-  europa_qualifier1: "border-blue-500/30 bg-blue-500/5",
-  europa_eliminator: "border-rose-500/40 bg-rose-500/5",
-  europa_qualifier2: "border-orange-500/30 bg-orange-500/5",
-  europa_final:      "border-cyan-500/30 bg-cyan-500/5",
+  qualifier1:       "border-gold/40 bg-gold/5",
+  eliminator:       "border-violet-500/30 bg-violet-500/5",
+  qualifier2:       "border-sky-500/30 bg-sky-500/5",
+  challenger_final: "border-orange-500/30 bg-orange-500/5",
+  grand_final:      "border-emerald-500/40 bg-emerald-500/5",
 }
 
+// All 5 rounds use the coin toss flow (no set-format rounds)
 const TOSS_MATCH_TYPES = new Set([
-  "qualifier1", "eliminator", "europa_qualifier1", "europa_eliminator"
-])
-const SET_FORMAT_MATCH_TYPES = new Set([
-  "qualifier2", "final", "europa_qualifier2", "europa_final"
+  "qualifier1", "eliminator", "qualifier2", "challenger_final", "grand_final"
 ])
 
 // ── Coin flip animation ────────────────────────────────────────────────────────
@@ -84,7 +74,7 @@ function CoinFlip({ onDone }) {
   )
 }
 
-// ── 3v3 Tiebreaker UI ─────────────────────────────────────────────────────────
+// ── Tiebreaker Panel (3v3 or 5v5) ─────────────────────────────────────────────
 function TiebreakerPanel({ match }) {
   const { data: tbData, isLoading } = useLeaguePlayoffTiebreaker(match.id)
   const setup   = useSetupLeaguePlayoffTiebreaker()
@@ -92,54 +82,85 @@ function TiebreakerPanel({ match }) {
 
   const { data: p1Data } = usePlayers({ teamId: match.team1Id })
   const { data: p2Data } = usePlayers({ teamId: match.team2Id })
-  // /players returns a plain array (not { players: [] })
   const team1Players = Array.isArray(p1Data) ? p1Data : (p1Data?.players || [])
   const team2Players = Array.isArray(p2Data) ? p2Data : (p2Data?.players || [])
 
-  const [t1Sel, setT1Sel] = useState([null, null, null, null, null])
-  const [t2Sel, setT2Sel] = useState([null, null, null, null, null])
-  const [scores, setScores] = useState([
+  // Format picker: 3 or 5
+  const [format, setFormat]   = useState(null)        // null = not chosen yet
+  const [t1Sel, setT1Sel]     = useState([null, null, null, null, null])
+  const [t2Sel, setT2Sel]     = useState([null, null, null, null, null])
+  const [scores, setScores]   = useState([
     { p1: "", p2: "" }, { p1: "", p2: "" }, { p1: "", p2: "" }, { p1: "", p2: "" }, { p1: "", p2: "" }
   ])
 
   const tb = tbData?.tiebreaker
+  const activeSlots = format || (tb?.format) || 5
+  const slotIndices = Array.from({ length: activeSlots }, (_, i) => i)
 
   const handleSetup = () => {
-    if (t1Sel.some(v => !v) || t2Sel.some(v => !v)) {
-      alert("Select 5 players from each team.")
+    const slots = t1Sel.slice(0, activeSlots)
+    const slots2 = t2Sel.slice(0, activeSlots)
+    if (slots.some(v => !v) || slots2.some(v => !v)) {
+      alert(`Select ${activeSlots} players from each team.`)
       return
     }
-    if (new Set(t1Sel).size < 5 || new Set(t2Sel).size < 5) {
+    if (new Set(slots).size < activeSlots || new Set(slots2).size < activeSlots) {
       alert("Each player can only be selected once.")
       return
     }
-    setup.mutate({ matchId: match.id, team1Players: t1Sel.map(Number), team2Players: t2Sel.map(Number) })
+    setup.mutate({
+      matchId: match.id,
+      format: activeSlots,
+      team1Players: slots.map(Number),
+      team2Players: slots2.map(Number),
+    })
   }
 
   const handleResults = () => {
-    const parsed = scores.map(s => ({ p1Pts: parseInt(s.p1), p2Pts: parseInt(s.p2) }))
+    const parsed = scores.slice(0, activeSlots).map(s => ({ p1Pts: parseInt(s.p1), p2Pts: parseInt(s.p2) }))
     if (parsed.some(s => isNaN(s.p1Pts) || isNaN(s.p2Pts))) {
-      alert("Enter points for all 5 matchups.")
+      alert(`Enter points for all ${activeSlots} matchups.`)
       return
     }
-    results.mutate({ matchId: match.id, m1: parsed[0], m2: parsed[1], m3: parsed[2], m4: parsed[3], m5: parsed[4] })
+    const payload = { matchId: match.id, m1: parsed[0], m2: parsed[1], m3: parsed[2] }
+    if (activeSlots === 5) { payload.m4 = parsed[3]; payload.m5 = parsed[4] }
+    results.mutate(payload)
   }
 
   if (isLoading) return <p className="text-xs text-slate-500">Loading tiebreaker…</p>
 
-  // Phase 1: select players
+  // Phase 0: pick format (only shown if no tiebreaker setup yet)
   if (!tb || tb.status === "setup") {
+    if (!format) {
+      return (
+        <div className="space-y-3 border border-rose-500/20 rounded-xl p-3 bg-rose-500/5">
+          <p className="text-xs font-bold uppercase tracking-wide text-rose-400 text-center">
+            ⚡ Tiebreaker — Choose Format
+          </p>
+          <div className="grid grid-cols-2 gap-2">
+            {[3, 5].map(n => (
+              <button key={n} onClick={() => setFormat(n)}
+                className="py-3 rounded-xl border border-rose-500/30 text-rose-300 font-bold text-sm hover:bg-rose-500/10 transition-colors">
+                {n}v{n} Decider
+              </button>
+            ))}
+          </div>
+        </div>
+      )
+    }
+
+    // Phase 1: select players
     const TeamPicker = ({ label, players, sel, setSel }) => (
       <div className="space-y-1.5">
         <p className="text-xs font-semibold text-slate-400">{label}</p>
-        {[0, 1, 2, 3, 4].map(i => (
+        {slotIndices.map(i => (
           <select key={i} value={sel[i] || ""}
             onChange={e => { const n = [...sel]; n[i] = e.target.value; setSel(n) }}
             className="w-full bg-pitch-900 border border-surface-border/40 rounded-lg px-2 py-1.5 text-xs text-white focus:outline-none focus:border-accent/60">
             <option value="">— Player {i + 1} —</option>
             {players.map(p => (
               <option key={p.id} value={p.id}
-                disabled={sel.includes(String(p.id)) && sel[i] !== String(p.id)}>
+                disabled={sel.slice(0, activeSlots).includes(String(p.id)) && sel[i] !== String(p.id)}>
                 {p.name}
               </option>
             ))}
@@ -150,9 +171,15 @@ function TiebreakerPanel({ match }) {
 
     return (
       <div className="space-y-3 border border-rose-500/20 rounded-xl p-3 bg-rose-500/5">
-        <p className="text-xs font-bold uppercase tracking-wide text-rose-400 text-center">
-          ⚡ Tiebreaker — Select 5 Players Each
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-bold uppercase tracking-wide text-rose-400">
+            ⚡ {format}v{format} Tiebreaker — Select Players
+          </p>
+          <button onClick={() => setFormat(null)}
+            className="text-[10px] text-slate-600 hover:text-slate-400 underline underline-offset-2">
+            Change format
+          </button>
+        </div>
         <div className="grid grid-cols-2 gap-3">
           <TeamPicker label={match.team1Name} players={team1Players} sel={t1Sel} setSel={setT1Sel} />
           <TeamPicker label={match.team2Name} players={team2Players} sel={t2Sel} setSel={setT2Sel} />
@@ -169,20 +196,23 @@ function TiebreakerPanel({ match }) {
 
   // Phase 2: matchups drawn, enter scores
   if (tb.status === "pending_results") {
+    const tbFormat = tb.format || 5
     const matchups = [
       { p1: tb.m1_p1_name, p2: tb.m1_p2_name, idx: 0 },
       { p1: tb.m2_p1_name, p2: tb.m2_p2_name, idx: 1 },
       { p1: tb.m3_p1_name, p2: tb.m3_p2_name, idx: 2 },
-      { p1: tb.m4_p1_name, p2: tb.m4_p2_name, idx: 3 },
-      { p1: tb.m5_p1_name, p2: tb.m5_p2_name, idx: 4 },
+      ...(tbFormat === 5 ? [
+        { p1: tb.m4_p1_name, p2: tb.m4_p2_name, idx: 3 },
+        { p1: tb.m5_p1_name, p2: tb.m5_p2_name, idx: 4 },
+      ] : []),
     ]
     return (
       <div className="space-y-3 border border-rose-500/20 rounded-xl p-3 bg-rose-500/5">
         <p className="text-xs font-bold uppercase tracking-wide text-rose-400 text-center">
-          ⚡ Tiebreaker — Enter Match Points (5v5)
+          ⚡ {tbFormat}v{tbFormat} Tiebreaker — Enter Points
         </p>
         <p className="text-[10px] text-slate-500 text-center">
-          {match.team1Name} players (left) vs {match.team2Name} players (right)
+          {match.team1Name} (left) vs {match.team2Name} (right)
         </p>
         <div className="space-y-2">
           {matchups.map(({ p1, p2, idx }) => (
@@ -203,7 +233,11 @@ function TiebreakerPanel({ match }) {
           className="w-full py-2.5 rounded-xl bg-accent text-pitch-900 font-bold text-sm hover:bg-accent/90 disabled:opacity-50">
           {results.isPending ? "Saving…" : "Submit Results"}
         </button>
-        <button onClick={() => setup.mutate({ matchId: match.id, team1Players: [tb.team1_p1_id, tb.team1_p2_id, tb.team1_p3_id, tb.team1_p4_id, tb.team1_p5_id], team2Players: [tb.team2_p1_id, tb.team2_p2_id, tb.team2_p3_id, tb.team2_p4_id, tb.team2_p5_id] })}
+        <button onClick={() => {
+          const t1 = [tb.team1_p1_id, tb.team1_p2_id, tb.team1_p3_id, tb.team1_p4_id, tb.team1_p5_id].filter(Boolean).slice(0, tbFormat)
+          const t2 = [tb.team2_p1_id, tb.team2_p2_id, tb.team2_p3_id, tb.team2_p4_id, tb.team2_p5_id].filter(Boolean).slice(0, tbFormat)
+          setup.mutate({ matchId: match.id, format: tbFormat, team1Players: t1, team2Players: t2 })
+        }}
           className="w-full text-[10px] text-slate-600 hover:text-slate-400 underline underline-offset-2">
           Re-draw matchups
         </button>
@@ -213,183 +247,6 @@ function TiebreakerPanel({ match }) {
   }
 
   return null
-}
-
-// ── Finals Set Panel (inline score entry for qualifier2 / final) ──────────────
-function FinalsSetPanel({ match }) {
-  const qc = useQueryClient()
-  const qKey = ["finals-set-config", match.id]
-
-  const { data, isLoading } = useQuery({
-    queryKey: qKey,
-    queryFn: () =>
-      api.get(`/finals-sets/match/${match.id}?source=team_league_playoffs`).then(r => r.data.config),
-    staleTime: 10000,
-  })
-
-  const scoreMut = useMutation({
-    mutationFn: ({ configId, setId, scores }) =>
-      api.post(`/finals-sets/${configId}/set/${setId}/score`, { scores }).then(r => r.data.config),
-    onSuccess: () => qc.invalidateQueries({ queryKey: qKey }),
-  })
-
-  // Per-matchup score state: { [matchupId]: { t1: "", t2: "" } }
-  const [scoreInputs, setScoreInputs] = useState({})
-
-  if (isLoading) return <p className="text-xs text-slate-500 text-center py-2">Loading finals…</p>
-
-  // No config yet — show setup button
-  if (!data) {
-    return (
-      <div className="pt-1 border-t border-surface-border/30">
-        <button
-          onClick={() => {
-            const params = new URLSearchParams({
-              source: "team_league_playoffs",
-              matchType: match.matchType,
-              matchId: match.id,
-            })
-            window.location.href = `/admin/finals-setup?${params}`
-          }}
-          className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600/20 border border-violet-500/40 text-violet-300 font-semibold text-xs hover:bg-violet-600/30 hover:border-violet-500/60 transition-colors"
-        >
-          <Layers className="w-3.5 h-3.5" />
-          Setup Set Format
-        </button>
-      </div>
-    )
-  }
-
-  const config = data
-  const allMatchups = config.sets.flatMap(s => s.matchups)
-  const totalMatchups = allMatchups.length
-  const doneMatchups  = allMatchups.filter(m => m.status === "completed").length
-
-  // Tally wins by team using player-team mapping
-  const playerTeamMap = {}
-  for (const set of config.sets) {
-    for (const p of (set.players || [])) {
-      playerTeamMap[p.player_id] = p.team_id
-    }
-  }
-  let team1Wins = 0, team2Wins = 0
-  for (const mu of allMatchups) {
-    if (!mu.winner_player_id) continue
-    const wTeam = playerTeamMap[mu.winner_player_id]
-    if (wTeam === match.team1Id) team1Wins++
-    else if (wTeam === match.team2Id) team2Wins++
-  }
-
-  const isCompleted = config.status === "completed"
-  const needsTiebreaker = config.status === "needs_decision"
-  const winner = isCompleted && config.winner_team_id
-    ? (config.winner_team_id === match.team1Id ? match.team1Name : match.team2Name)
-    : null
-
-  const handleSave = (setId, mu) => {
-    const inp = scoreInputs[mu.id] || {}
-    const t1 = inp.t1 !== undefined ? inp.t1 : (mu.team1_score ?? "")
-    const t2 = inp.t2 !== undefined ? inp.t2 : (mu.team2_score ?? "")
-    if (t1 === "" || t2 === "") { alert("Enter scores for both players"); return }
-    scoreMut.mutate({ configId: config.id, setId, scores: [{ matchupId: mu.id, team1Score: t1, team2Score: t2 }] })
-  }
-
-  return (
-    <div className="pt-2 border-t border-surface-border/30 space-y-3">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold uppercase tracking-wide text-violet-400">
-          🎯 Set Format — {doneMatchups}/{totalMatchups} done
-        </span>
-        <span className="text-xs font-mono text-white">
-          <span className="text-emerald-400 font-bold">{team1Wins}</span>
-          <span className="text-slate-500 mx-1">–</span>
-          <span className="text-blue-400 font-bold">{team2Wins}</span>
-        </span>
-      </div>
-
-      {winner && (
-        <div className="flex items-center justify-center gap-2 py-2 rounded-lg bg-gold/10 border border-gold/20">
-          <Crown className="w-4 h-4 text-gold" />
-          <span className="text-sm font-bold text-gold">{winner} wins the Final!</span>
-        </div>
-      )}
-
-      {/* Matchup list */}
-      <div className="space-y-2">
-        {config.sets.map(set =>
-          set.matchups.map(mu => {
-            const done = mu.status === "completed"
-            const inp  = scoreInputs[mu.id] || {}
-            const t1Val = inp.t1 !== undefined ? inp.t1 : (mu.team1_score ?? "")
-            const t2Val = inp.t2 !== undefined ? inp.t2 : (mu.team2_score ?? "")
-            // t1Won/t2Won = did the LEFT/RIGHT player (by matchup position) win?
-            const t1Won = done && mu.winner_player_id === mu.team1_player_id
-            const t2Won = done && mu.winner_player_id === mu.team2_player_id
-
-            return (
-              <div key={mu.id} className={cn(
-                "rounded-lg px-2 py-2 space-y-1",
-                done ? "bg-pitch-900/40" : "bg-pitch-900/20 border border-surface-border/20"
-              )}>
-                <div className="flex items-center gap-1.5">
-                  <span className={cn("text-xs flex-1 truncate text-right",
-                    done && t1Won ? "text-emerald-400 font-semibold" : done && !t1Won ? "text-slate-500" : "text-white")}>
-                    {mu.team1_player_name}
-                  </span>
-                  <input
-                    type="number" min="0"
-                    value={t1Val}
-                    onChange={e => setScoreInputs(prev => ({ ...prev, [mu.id]: { ...prev[mu.id], t1: e.target.value } }))}
-                    className="w-10 bg-pitch-800 border border-surface-border/40 rounded px-1 py-0.5 text-xs text-center text-white focus:outline-none focus:border-violet-500/60"
-                  />
-                  <span className="text-slate-600 text-[10px]">–</span>
-                  <input
-                    type="number" min="0"
-                    value={t2Val}
-                    onChange={e => setScoreInputs(prev => ({ ...prev, [mu.id]: { ...prev[mu.id], t2: e.target.value } }))}
-                    className="w-10 bg-pitch-800 border border-surface-border/40 rounded px-1 py-0.5 text-xs text-center text-white focus:outline-none focus:border-violet-500/60"
-                  />
-                  <span className={cn("text-xs flex-1 truncate",
-                    done && t2Won ? "text-emerald-400 font-semibold" : done && !t2Won ? "text-slate-500" : "text-white")}>
-                    {mu.team2_player_name}
-                  </span>
-                  <button
-                    onClick={() => handleSave(set.id, mu)}
-                    disabled={scoreMut.isPending}
-                    className="text-[10px] px-2 py-0.5 rounded bg-violet-600/30 border border-violet-500/30 text-violet-300 hover:bg-violet-600/50 disabled:opacity-40 whitespace-nowrap">
-                    {done ? "Edit" : "Save"}
-                  </button>
-                </div>
-                {done && (
-                  <div className="flex justify-center">
-                    <span className={cn("text-[10px] px-2 py-0.5 rounded font-semibold",
-                      t1Won ? "text-emerald-400" : t2Won ? "text-blue-400" : "text-slate-500")}>
-                      {t1Won ? `${mu.team1_player_name} wins` : t2Won ? `${mu.team2_player_name} wins` : "Draw"}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )
-          })
-        )}
-      </div>
-
-      {/* 5v5 Tiebreaker if tied after all matchups */}
-      {needsTiebreaker && (
-        <div className="border border-rose-500/20 rounded-xl p-3 bg-rose-500/5 space-y-2">
-          <p className="text-xs font-bold uppercase tracking-wide text-rose-400 text-center">
-            ⚡ {team1Wins}–{team2Wins} Draw! 5v5 Tiebreaker
-          </p>
-          <TiebreakerPanel match={match} />
-        </div>
-      )}
-
-      {scoreMut.isError && (
-        <p className="text-rose-400 text-xs text-center">{scoreMut.error?.response?.data?.error || "Error saving"}</p>
-      )}
-    </div>
-  )
 }
 
 // ── Single playoff match card ──────────────────────────────────────────────────
@@ -418,7 +275,7 @@ function PlayoffMatchCard({ match }) {
         <span className="text-xs font-bold uppercase tracking-wide text-slate-400">
           {MATCH_LABELS[match.matchType] || match.matchType}
         </span>
-        {completed && <span className="flex items-center gap-1 text-xs text-emerald-400 font-semibold"><CheckCircle className="w-3 h-3" /> Done</span>}
+        {completed    && <span className="flex items-center gap-1 text-xs text-emerald-400 font-semibold"><CheckCircle className="w-3 h-3" /> Done</span>}
         {needsDecision && <span className="text-xs text-rose-400 font-semibold animate-pulse">⚡ Tied — Tiebreaker</span>}
       </div>
 
@@ -446,7 +303,7 @@ function PlayoffMatchCard({ match }) {
             </div>
           )}
 
-          {/* Leg scores (match points) */}
+          {/* Leg scores */}
           {(completed || needsDecision || (choiceDone && (match.team1Leg1 !== null || match.team1Leg2 !== null))) && (
             <div className="flex gap-4 justify-center text-xs text-slate-500">
               <span>Leg 1: {match.team1Leg1 ?? "—"} – {match.team2Leg1 ?? "—"} pts</span>
@@ -454,10 +311,10 @@ function PlayoffMatchCard({ match }) {
             </div>
           )}
 
-          {/* Tiebreaker panel */}
+          {/* Tiebreaker */}
           {needsDecision && <TiebreakerPanel match={match} />}
 
-          {/* Toss flow — Q1, Eliminator, Europa Q1, Europa Eliminator; set-format matches use FinalsSetPanel */}
+          {/* Toss flow */}
           {!completed && !needsDecision && !choiceDone && TOSS_MATCH_TYPES.has(match.matchType) && (
             <div className="border border-surface-border/40 rounded-xl p-3 bg-pitch-900/40 space-y-3">
               <p className="text-xs text-slate-400 font-semibold uppercase tracking-wide text-center">🪙 Coin Toss</p>
@@ -497,8 +354,8 @@ function PlayoffMatchCard({ match }) {
             </div>
           )}
 
-          {/* Fixtures created — toss-based matches only */}
-          {!completed && !needsDecision && choiceDone && TOSS_MATCH_TYPES.has(match.matchType) && (
+          {/* Fixtures live */}
+          {!completed && !needsDecision && choiceDone && (
             <div className="space-y-2">
               <div className="flex items-center gap-1.5 text-xs text-emerald-400">
                 <CheckCircle className="w-3.5 h-3.5" />
@@ -512,11 +369,6 @@ function PlayoffMatchCard({ match }) {
               </div>
             </div>
           )}
-
-          {/* Set Format panel — Q2, Final, Europa Q2, Europa Final */}
-          {SET_FORMAT_MATCH_TYPES.has(match.matchType) && (
-            <FinalsSetPanel match={match} />
-          )}
         </>
       )}
     </div>
@@ -524,6 +376,8 @@ function PlayoffMatchCard({ match }) {
 }
 
 // ── Main export ───────────────────────────────────────────────────────────────
+const PLAYOFF_ORDER = ["qualifier1", "eliminator", "qualifier2", "challenger_final", "grand_final"]
+
 export default function LeaguePlayoffAdmin() {
   const { data, isLoading } = useTeamLeaguePlayoffs()
   const generate = useGenerateLeaguePlayoffs()
@@ -534,15 +388,9 @@ export default function LeaguePlayoffAdmin() {
   const matches    = data?.matches || []
   const hasMatches = matches.length > 0
 
-  const CHAMP_ORDER  = ["qualifier1", "eliminator", "qualifier2", "final"]
-  const EUROPA_ORDER = ["europa_qualifier1", "europa_eliminator", "europa_qualifier2", "europa_final"]
-
-  const champMatches  = [...matches]
-    .filter(m => CHAMP_ORDER.includes(m.matchType))
-    .sort((a, b) => CHAMP_ORDER.indexOf(a.matchType) - CHAMP_ORDER.indexOf(b.matchType))
-  const europaMatches = [...matches]
-    .filter(m => EUROPA_ORDER.includes(m.matchType))
-    .sort((a, b) => EUROPA_ORDER.indexOf(a.matchType) - EUROPA_ORDER.indexOf(b.matchType))
+  const sortedMatches = [...matches]
+    .filter(m => PLAYOFF_ORDER.includes(m.matchType))
+    .sort((a, b) => PLAYOFF_ORDER.indexOf(a.matchType) - PLAYOFF_ORDER.indexOf(b.matchType))
 
   return (
     <div className="space-y-6">
@@ -551,7 +399,9 @@ export default function LeaguePlayoffAdmin() {
           <h2 className="text-lg font-bold text-white flex items-center gap-2">
             <Trophy className="w-5 h-5 text-gold" /> League Playoffs
           </h2>
-          <p className="text-xs text-slate-500 mt-0.5">2-leg ties · coin toss for home advantage · 3v3 tiebreaker if level</p>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Top 5 · 5 rounds · 2-leg ties · coin toss · 3v3 or 5v5 tiebreaker
+          </p>
         </div>
         <div className="flex gap-2">
           {hasMatches && (
@@ -589,32 +439,15 @@ export default function LeaguePlayoffAdmin() {
       )}
 
       {hasMatches && (
-        <div className="space-y-8">
-          {/* ── Champions Bracket ──────────────────────────────────── */}
-          <div className="space-y-3">
-            <div className="flex items-center gap-2">
-              <Crown className="w-4 h-4 text-gold" />
-              <h3 className="text-sm font-bold text-gold uppercase tracking-wide">Champions Bracket</h3>
-              <span className="text-xs text-slate-500">(1st – 4th)</span>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {champMatches.map(m => <PlayoffMatchCard key={m.id} match={m} />)}
-            </div>
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <Crown className="w-4 h-4 text-gold" />
+            <h3 className="text-sm font-bold text-gold uppercase tracking-wide">Top 5 Playoffs</h3>
+            <span className="text-xs text-slate-500">(Double-Chance format)</span>
           </div>
-
-          {/* ── Europa Bracket ─────────────────────────────────────── */}
-          {europaMatches.length > 0 && (
-            <div className="space-y-3">
-              <div className="flex items-center gap-2">
-                <Trophy className="w-4 h-4 text-cyan-400" />
-                <h3 className="text-sm font-bold text-cyan-400 uppercase tracking-wide">Europa Bracket</h3>
-                <span className="text-xs text-slate-500">(5th – 8th · loser of Eliminator relegated)</span>
-              </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {europaMatches.map(m => <PlayoffMatchCard key={m.id} match={m} />)}
-              </div>
-            </div>
-          )}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {sortedMatches.map(m => <PlayoffMatchCard key={m.id} match={m} />)}
+          </div>
         </div>
       )}
     </div>

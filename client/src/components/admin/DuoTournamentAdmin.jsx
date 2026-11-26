@@ -22,8 +22,10 @@ const GRADE_COLORS = {
 function PairCreator({ season, drawStatus }) {
   const qc = useQueryClient()
   const [name, setName]               = useState("")
+  const [teamType, setTeamType]       = useState("duo")
   const [player1Id, setP1]            = useState("")
   const [player2Id, setP2]            = useState("")
+  const [player3Id, setP3]            = useState("")
   const [error, setError]             = useState("")
   const [logoPreview, setLogoPreview] = useState(null)
   const [uploadingLogo, setUL]        = useState(false)
@@ -33,6 +35,7 @@ function PairCreator({ season, drawStatus }) {
   const [editP2, setEditP2]           = useState("")
   const [editLogoPreview, setEditLP]  = useState(null)
   const [editUploading, setEditUL]    = useState(false)
+  const [swapSubId, setSwapSubId]     = useState(null)   // pairId for swap-sub panel
   const logoInputRef                  = useRef(null)
   const patchInputRef                 = useRef(null)
   const editLogoRef                   = useRef(null)
@@ -53,17 +56,28 @@ function PairCreator({ season, drawStatus }) {
   const addMut = useMutation({
     mutationFn: () => api.post("/duo/pairs", {
       seasonNumber: season,
+      teamType,
       player1Id: Number(player1Id),
       player2Id: Number(player2Id),
+      ...(teamType === "trio" && player3Id ? { player3Id: Number(player3Id) } : {}),
       duoName: name.trim(),
       logoUrl: logoPreview || null,
     }).then(r => r.data),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["duo-pairs", season] })
-      setName(""); setP1(""); setP2(""); setError("")
+      setName(""); setP1(""); setP2(""); setP3(""); setError("")
       setLogoPreview(null)
     },
     onError: (err) => setError(err?.response?.data?.error || "Failed to add pair"),
+  })
+
+  const swapSubMut = useMutation({
+    mutationFn: ({ id, swapWith }) => api.patch(`/duo/pairs/${id}/swap-sub`, { swapWith }).then(r => r.data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["duo-pairs", season] })
+      setSwapSubId(null)
+    },
+    onError: (err) => alert(err?.response?.data?.error || "Swap failed"),
   })
 
   const deleteMut = useMutation({
@@ -154,14 +168,30 @@ function PairCreator({ season, drawStatus }) {
     }
   }
 
-  const usedIds = new Set(pairs.flatMap(p => [p.set1Id, p.set2Id]))
-  const canAdd = name.trim().length > 0 && player1Id && player2Id && player1Id !== player2Id
+  const usedIds = new Set(pairs.flatMap(p => [p.set1Id, p.set2Id, p.player3Id].filter(Boolean)))
+  const baseDuoOk = name.trim().length > 0 && player1Id && player2Id && player1Id !== player2Id
+  const trioOk = baseDuoOk && player3Id && player3Id !== player1Id && player3Id !== player2Id
+  const canAdd = teamType === "trio" ? trioOk : baseDuoOk
 
   return (
     <div className="space-y-4">
       {!locked && (
         <div className="card p-5 space-y-4">
-          <h3 className="text-sm font-bold text-white">Add Duo Pair</h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-bold text-white">Add Team</h3>
+            {/* Duo / Trio toggle */}
+            <div className="flex rounded-lg border border-surface-border overflow-hidden text-xs font-semibold">
+              {["duo", "trio"].map(t => (
+                <button key={t} onClick={() => { setTeamType(t); setP3("") }}
+                  className={cn(
+                    "px-3 py-1 capitalize transition-colors",
+                    teamType === t ? "bg-accent text-white" : "text-slate-400 hover:text-white"
+                  )}>
+                  {t}
+                </button>
+              ))}
+            </div>
+          </div>
 
           <div>
             <p className="text-[10px] text-slate-500 uppercase tracking-widest mb-2">Team Logo <span className="normal-case">(optional)</span></p>
@@ -197,14 +227,17 @@ function PairCreator({ season, drawStatus }) {
               className="w-full bg-pitch-800 border border-surface-border rounded-xl px-3 py-2 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-accent/40" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            {[{ label: "Player 1", val: player1Id, set: setP1 },
-              { label: "Player 2", val: player2Id, set: setP2 }].map(({ label, val, set }) => (
+          <div className={cn("grid gap-3", teamType === "trio" ? "grid-cols-3" : "grid-cols-2")}>
+            {[
+              { label: "Player 1 (Set 1)", val: player1Id, set: setP1 },
+              { label: "Player 2 (Set 2)", val: player2Id, set: setP2 },
+              ...(teamType === "trio" ? [{ label: "Sub (Bench)", val: player3Id, set: setP3 }] : []),
+            ].map(({ label, val, set }) => (
               <div key={label}>
                 <p className="text-[10px] text-slate-500 mb-1">{label}</p>
                 <select value={val} onChange={e => set(e.target.value)}
                   className="w-full bg-pitch-800 border border-surface-border rounded-xl px-2 py-2 text-sm text-white">
-                  <option value="">Pick player…</option>
+                  <option value="">Pick…</option>
                   {allPlayers
                     .filter(p => !usedIds.has(p.id) || p.id === Number(val))
                     .map(p => (
@@ -218,12 +251,15 @@ function PairCreator({ season, drawStatus }) {
           {player1Id && player2Id && player1Id === player2Id && (
             <p className="text-xs text-rose-400">Player 1 and Player 2 must be different</p>
           )}
+          {teamType === "trio" && player3Id && (player3Id === player1Id || player3Id === player2Id) && (
+            <p className="text-xs text-rose-400">All 3 players must be different</p>
+          )}
           {error && <p className="text-xs text-rose-400">{error}</p>}
 
           <button onClick={() => addMut.mutate()} disabled={!canAdd || addMut.isPending || uploadingLogo}
             className="flex items-center gap-2 bg-accent text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-accent/90 disabled:opacity-50 transition-all">
             <Users className="w-4 h-4" />
-            {addMut.isPending ? "Adding…" : "Add Pair"}
+            {addMut.isPending ? "Adding…" : teamType === "trio" ? "Add Trio" : "Add Pair"}
           </button>
         </div>
       )}
@@ -237,9 +273,11 @@ function PairCreator({ season, drawStatus }) {
           </div>
         )}
         {pairs.map((pair, idx) => {
-          const isEditing = editingPairId === pair.id
+          const isEditing   = editingPairId === pair.id
+          const isSwapping  = swapSubId === pair.id
+          const isTrio      = pair.teamType === "trio"
           // players available for edit dropdowns: exclude used except current pair's own players
-          const usedExcludePair = new Set(pairs.flatMap(p => p.id === pair.id ? [] : [p.set1Id, p.set2Id]))
+          const usedExcludePair = new Set(pairs.flatMap(p => p.id === pair.id ? [] : [p.set1Id, p.set2Id, p.player3Id].filter(Boolean)))
 
           return (
             <div key={pair.id} className="bg-pitch-800 rounded-xl border border-surface-border overflow-hidden">
@@ -254,13 +292,36 @@ function PairCreator({ season, drawStatus }) {
                   </div>
                 )}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-white truncate">{pair.duoName}</p>
-                  <p className="text-xs text-slate-500 truncate">{pair.set1Name} & {pair.set2Name}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="text-sm font-bold text-white truncate">{pair.duoName}</p>
+                    {isTrio && (
+                      <span className="text-[9px] font-bold text-violet-400 bg-violet-400/10 border border-violet-400/30 px-1.5 py-0.5 rounded flex-shrink-0">TRIO</span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 truncate">{pair.set1Name} & {pair.set2Name}
+                    {isTrio && pair.player3Name && (
+                      <span className="text-slate-600"> · <span className="text-amber-400/70">Sub: {pair.player3Name}</span></span>
+                    )}
+                  </p>
                 </div>
                 {pair.groupName && (
                   <span className="text-xs font-bold text-accent bg-accent/10 border border-accent/25 px-2 py-0.5 rounded-lg flex-shrink-0">
                     {pair.groupName}
                   </span>
+                )}
+                {/* Swap sub button — available for trio teams even after draw */}
+                {isTrio && pair.player3Name && (
+                  <button
+                    onClick={() => setSwapSubId(isSwapping ? null : pair.id)}
+                    title="Swap substitute"
+                    className={cn(
+                      "p-1.5 rounded-lg border transition-colors flex-shrink-0 text-xs",
+                      isSwapping
+                        ? "text-amber-400 border-amber-400/40 bg-amber-400/10"
+                        : "text-amber-400/60 border-surface-border hover:text-amber-400 hover:border-amber-400/40"
+                    )}>
+                    ⇄
+                  </button>
                 )}
                 {!locked && (
                   <>
@@ -281,6 +342,41 @@ function PairCreator({ season, drawStatus }) {
                   </>
                 )}
               </div>
+
+              {/* Swap Sub Panel — trio only */}
+              {isSwapping && isTrio && (
+                <div className="border-t border-surface-border px-4 py-4 space-y-3 bg-pitch-900/60">
+                  <p className="text-[10px] text-slate-500 uppercase tracking-widest">Swap Substitute</p>
+                  <p className="text-xs text-slate-400">
+                    Current sub: <span className="text-amber-400 font-semibold">{pair.player3Name}</span>
+                    <span className="text-slate-600"> ({pair.player3Grade})</span>
+                  </p>
+                  <p className="text-[10px] text-slate-600">Pick which playing player to bench — the sub takes their spot for future matchdays.</p>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { label: `Bench ${pair.set1Name}`, swapWith: "set1", playerName: pair.set1Name, grade: pair.set1Grade },
+                      { label: `Bench ${pair.set2Name}`, swapWith: "set2", playerName: pair.set2Name, grade: pair.set2Grade },
+                    ].map(({ label, swapWith, playerName, grade }) => (
+                      <button
+                        key={swapWith}
+                        onClick={() => {
+                          if (window.confirm(`Swap ${pair.player3Name} in for ${playerName}?\n\nPending fixture player assignments will be reset for this team.`)) {
+                            swapSubMut.mutate({ id: pair.id, swapWith })
+                          }
+                        }}
+                        disabled={swapSubMut.isPending}
+                        className="text-left px-3 py-2 rounded-lg border border-surface-border hover:border-amber-400/40 hover:bg-amber-400/5 transition-colors disabled:opacity-50">
+                        <p className="text-xs font-semibold text-white">{playerName}</p>
+                        <p className="text-[10px] text-slate-500">{grade} · bench this player</p>
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => setSwapSubId(null)}
+                    className="text-xs text-slate-500 hover:text-slate-300 transition-colors">
+                    Cancel
+                  </button>
+                </div>
+              )}
 
               {/* Inline Edit Panel */}
               {isEditing && (
@@ -359,7 +455,7 @@ function PairCreator({ season, drawStatus }) {
 
       {!locked && pairs.length > 0 && (
         <div className="space-y-1">
-          <p className="text-xs text-slate-600 text-center">{pairs.length} pair{pairs.length !== 1 ? "s" : ""} ready — use "Start Draw" above when done</p>
+          <p className="text-xs text-slate-600 text-center">{pairs.length} team{pairs.length !== 1 ? "s" : ""} ready — use "Start Draw" above when done</p>
           {pairs.length < 24 && (
             <p className="text-xs text-amber-400/80 text-center">
               ⚠️ Need at least 24 pairs for the draw ({24 - pairs.length} more needed — minimum 3 per group × 8 groups)

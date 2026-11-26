@@ -20,7 +20,6 @@ const WeeklyPowerRankings = lazy(() => import("./pages/WeeklyPowerRankings"))
 const WeeklyDraw          = lazy(() => import("./pages/WeeklyDraw"))
 const WeeklyBracket       = lazy(() => import("./pages/WeeklyBracket"))
 const RevolutionDraw      = lazy(() => import("./pages/RevolutionDraw"))
-const TlgDraw             = lazy(() => import("./pages/TlgDraw"))
 const RevolutionBracket   = lazy(() => import("./pages/RevolutionBracket"))
 const UclDraw             = lazy(() => import("./pages/UclDraw"))
 const UclKODraw           = lazy(() => import("./pages/UclKODraw"))
@@ -77,7 +76,6 @@ export default function App() {
           {/* Admin-protected draw/bracket routes */}
           <Route path="/weekly/draw/:id"         element={<ProtectedRoute role="admin"><WeeklyDraw /></ProtectedRoute>} />
           <Route path="/revolution/draw/:id"     element={<ProtectedRoute role="admin"><RevolutionDraw /></ProtectedRoute>} />
-          <Route path="/tlg-draw/:id"            element={<ProtectedRoute role="admin"><TlgDraw /></ProtectedRoute>} />
           <Route path="/revolution/bracket/:id"  element={<ProtectedRoute role="admin"><RevolutionBracket /></ProtectedRoute>} />
           <Route path="/ucl/draw"                element={<ProtectedRoute role="admin"><UclDraw /></ProtectedRoute>} />
           <Route path="/ucl-knockout/draw/:id"   element={<ProtectedRoute role="admin"><UclKODraw /></ProtectedRoute>} />

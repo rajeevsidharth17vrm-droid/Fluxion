@@ -120,6 +120,11 @@ const router = Router()
     await query(`ALTER TABLE duo_fixtures ADD COLUMN IF NOT EXISTS set1_home_player_id INT REFERENCES players(id)`)
     await query(`ALTER TABLE duo_fixtures ADD COLUMN IF NOT EXISTS set1_away_player_id INT REFERENCES players(id)`)
   } catch (e) { console.error('[duo] player setup migration:', e.message) }
+  // Trio support: team_type and substitute player
+  try {
+    await query(`ALTER TABLE duo_pairs ADD COLUMN IF NOT EXISTS team_type TEXT DEFAULT 'duo'`)
+    await query(`ALTER TABLE duo_pairs ADD COLUMN IF NOT EXISTS player3_id INT REFERENCES players(id)`)
+  } catch (e) { console.error('[duo] trio migration:', e.message) }
   // Decider match columns for 1-1 knockout ties
   try {
     await query(`ALTER TABLE duo_fixtures ADD COLUMN IF NOT EXISTS decider_home_player_id INT REFERENCES players(id)`)
@@ -597,24 +602,30 @@ router.post("/fixtures/:id/score", authenticate, adminOnly, async (req, res, nex
           const loserPair   = winnerPairId === fix.home_pair_id ? awayPair : homePair
           const winnerPair  = winnerPairId === fix.home_pair_id ? homePair : awayPair
 
-          // Duo Tour BDR: Winner=30, Runner-up=20, 3rd(SF loser)=10, QF loser=0
+          // Tour BDR: Winner=30, Runner-up=20, 3rd(SF loser)=10, QF loser=0 (same for Duo & Trio)
           const LOSER_BDR  = { qf: 0, sf: 10, final: 20 }
           const WINNER_BDR = { final: 30 }
           const loserBdr   = LOSER_BDR[fix.knockout_round]
           const winnerBdr  = WINNER_BDR[fix.knockout_round]
-          const duoSn1    = loserPair.season_number
-          const duoLabel1 = duoSn1 ? `S${duoSn1} Duo` : "Duo"
+          const loserSn1      = loserPair.season_number
+          const loserTag1     = loserPair.team_type === "trio" ? "Trio" : "Duo"
+          const loserLabel1   = loserSn1 ? `S${loserSn1} ${loserTag1}` : loserTag1
 
           if (loserBdr && await claimAward(`duo_${fix.knockout_round}_loser`, fix.id)) {
-            for (const pid of [loserPair.set1_player_id, loserPair.set2_player_id].filter(Boolean)) {
-              await upsertBdrForSource(pid, loserBdr, duoLabel1, duoSn1, `duo_s${duoSn1}_player_${pid}`)
+            // Include sub (player3_id) for trio teams
+            const loserPids1 = [loserPair.set1_player_id, loserPair.set2_player_id, loserPair.player3_id].filter(Boolean)
+            for (const pid of loserPids1) {
+              await upsertBdrForSource(pid, loserBdr, loserLabel1, loserSn1, `duo_s${loserSn1}_player_${pid}`)
             }
           }
           if (winnerBdr && await claimAward(`duo_${fix.knockout_round}_winner`, fix.id)) {
-            const duoSn1w   = winnerPair.season_number
-            const duoLabel1w = duoSn1w ? `S${duoSn1w} Duo` : "Duo"
-            for (const pid of [winnerPair.set1_player_id, winnerPair.set2_player_id].filter(Boolean)) {
-              await upsertBdrForSource(pid, winnerBdr, duoLabel1w, duoSn1w, `duo_s${duoSn1w}_player_${pid}`)
+            const winnerSn1    = winnerPair.season_number
+            const winnerTag1   = winnerPair.team_type === "trio" ? "Trio" : "Duo"
+            const winnerLabel1 = winnerSn1 ? `S${winnerSn1} ${winnerTag1}` : winnerTag1
+            // Include sub (player3_id) for trio teams
+            const winnerPids1 = [winnerPair.set1_player_id, winnerPair.set2_player_id, winnerPair.player3_id].filter(Boolean)
+            for (const pid of winnerPids1) {
+              await upsertBdrForSource(pid, winnerBdr, winnerLabel1, winnerSn1, `duo_s${winnerSn1}_player_${pid}`)
             }
           }
 
@@ -646,7 +657,11 @@ router.post("/fixtures/:id/score", authenticate, adminOnly, async (req, res, nex
             `, [seasonNum])
             const topScorer = gbRes.rows[0]
             if (topScorer?.goals > 0) {
-              await upsertBdrForSource(topScorer.player_id, 10, `S${seasonNum} Duo Golden Boot`, seasonNum, `duo_golden_boot_s${seasonNum}_player_${topScorer.player_id}`)
+              // Trio Tour Golden Boot = 15 BDR; Duo Tour = 10 BDR
+          const isTrio  = winnerPair.team_type === "trio"
+          const gbBdr   = isTrio ? 15 : 10
+          const gbLabel = `S${seasonNum} ${isTrio ? "Trio" : "Duo"} Golden Boot`
+          await upsertBdrForSource(topScorer.player_id, gbBdr, gbLabel, seasonNum, `duo_golden_boot_s${seasonNum}_player_${topScorer.player_id}`)
               await awardOrReassignTrophy({
                 sourceKey:    `duo_golden_boot_s${seasonNum}`,
                 trophyColumn: "trophy11_count",
@@ -967,12 +982,15 @@ router.get("/pairs", async (req, res, next) => {
       SELECT
         dp.id, dp.duo_name AS "duoName", dp.season_number AS "seasonNumber",
         dp.logo_url AS "logoUrl",
-        p1.id AS "set1Id", p1.name AS "set1Name", p1.grade AS "set1Grade",
-        p2.id AS "set2Id", p2.name AS "set2Name", p2.grade AS "set2Grade",
+        COALESCE(dp.team_type, 'duo') AS "teamType",
+        p1.id AS "set1Id", p1.name AS "set1Name", p1.grade::text AS "set1Grade",
+        p2.id AS "set2Id", p2.name AS "set2Name", p2.grade::text AS "set2Grade",
+        p3.id AS "player3Id", p3.name AS "player3Name", p3.grade::text AS "player3Grade",
         dg.name AS "groupName"
       FROM duo_pairs dp
       JOIN players p1 ON p1.id = dp.set1_player_id
       JOIN players p2 ON p2.id = dp.set2_player_id
+      LEFT JOIN players p3 ON p3.id = dp.player3_id
       LEFT JOIN duo_group_members dgm ON dgm.duo_pair_id = dp.id
       LEFT JOIN duo_groups dg ON dg.id = dgm.group_id AND dg.season_number = dp.season_number
       WHERE dp.season_number = $1
@@ -982,13 +1000,15 @@ router.get("/pairs", async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// ── POST /api/duo/pairs — admin: manually create a duo pair ──────────────────
+// ── POST /api/duo/pairs — admin: manually create a duo/trio pair ──────────────
 router.post("/pairs", authenticate, adminOnly, async (req, res, next) => {
   try {
-    const { seasonNumber, player1Id, player2Id, duoName, logoUrl } = z.object({
+    const { seasonNumber, player1Id, player2Id, player3Id, duoName, logoUrl, teamType } = z.object({
       seasonNumber: z.number().int().positive(),
+      teamType:     z.enum(["duo", "trio"]).default("duo"),
       player1Id:    z.number().int().positive(),
       player2Id:    z.number().int().positive(),
+      player3Id:    z.number().int().positive().optional().nullable(),
       duoName:      z.string().min(1).max(80),
       logoUrl:      z.string().url().optional().nullable(),
     }).parse(req.body)
@@ -996,15 +1016,26 @@ router.post("/pairs", authenticate, adminOnly, async (req, res, next) => {
     if (player1Id === player2Id) {
       return res.status(400).json({ error: "A pair must have two different players" })
     }
+    if (teamType === "trio") {
+      if (!player3Id) return res.status(400).json({ error: "Trio requires a 3rd player (substitute)" })
+      if (player1Id === player3Id || player2Id === player3Id) {
+        return res.status(400).json({ error: "All 3 players in a trio must be different" })
+      }
+    }
 
     // Prevent players from appearing in multiple pairs this season
+    const playerIds = teamType === "trio" ? [player1Id, player2Id, player3Id] : [player1Id, player2Id]
     const dupCheck = await query(`
       SELECT dp.duo_name FROM duo_pairs dp
       WHERE dp.season_number = $1
-        AND (dp.set1_player_id = ANY($2::int[]) OR dp.set2_player_id = ANY($2::int[]))
-    `, [seasonNumber, [player1Id, player2Id]])
+        AND (
+          dp.set1_player_id = ANY($2::int[])
+          OR dp.set2_player_id = ANY($2::int[])
+          OR (dp.player3_id IS NOT NULL AND dp.player3_id = ANY($2::int[]))
+        )
+    `, [seasonNumber, playerIds])
     if (dupCheck.rows.length > 0) {
-      return res.status(400).json({ error: "One or both players are already in a pair this season" })
+      return res.status(400).json({ error: "One or more players are already in a pair this season" })
     }
 
     // Cannot add pairs once draw has started
@@ -1018,18 +1049,21 @@ router.post("/pairs", authenticate, adminOnly, async (req, res, next) => {
     }
 
     const pr = await query(
-      "INSERT INTO duo_pairs (season_number, set1_player_id, set2_player_id, duo_name, logo_url) VALUES ($1,$2,$3,$4,$5) RETURNING id",
-      [seasonNumber, player1Id, player2Id, duoName, logoUrl || null]
+      "INSERT INTO duo_pairs (season_number, set1_player_id, set2_player_id, duo_name, logo_url, team_type, player3_id) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id",
+      [seasonNumber, player1Id, player2Id, duoName, logoUrl || null, teamType, player3Id || null]
     )
 
     const fresh = await query(`
       SELECT dp.id, dp.duo_name AS "duoName", dp.season_number AS "seasonNumber",
         dp.logo_url AS "logoUrl",
-        p1.id AS "set1Id", p1.name AS "set1Name", p1.grade AS "set1Grade",
-        p2.id AS "set2Id", p2.name AS "set2Name", p2.grade AS "set2Grade"
+        COALESCE(dp.team_type, 'duo') AS "teamType",
+        p1.id AS "set1Id", p1.name AS "set1Name", p1.grade::text AS "set1Grade",
+        p2.id AS "set2Id", p2.name AS "set2Name", p2.grade::text AS "set2Grade",
+        p3.id AS "player3Id", p3.name AS "player3Name", p3.grade::text AS "player3Grade"
       FROM duo_pairs dp
       JOIN players p1 ON p1.id = dp.set1_player_id
       JOIN players p2 ON p2.id = dp.set2_player_id
+      LEFT JOIN players p3 ON p3.id = dp.player3_id
       WHERE dp.id = $1
     `, [pr.rows[0].id])
 
@@ -1281,11 +1315,76 @@ router.patch("/pairs/:id", authenticate, adminOnly, async (req, res, next) => {
 
     const fresh = await query(`
       SELECT dp.id, dp.duo_name AS "duoName",
-        p1.id AS "set1Id", p1.name AS "set1Name", p1.grade AS "set1Grade",
-        p2.id AS "set2Id", p2.name AS "set2Name", p2.grade AS "set2Grade"
+        COALESCE(dp.team_type, 'duo') AS "teamType",
+        p1.id AS "set1Id", p1.name AS "set1Name", p1.grade::text AS "set1Grade",
+        p2.id AS "set2Id", p2.name AS "set2Name", p2.grade::text AS "set2Grade",
+        p3.id AS "player3Id", p3.name AS "player3Name", p3.grade::text AS "player3Grade"
       FROM duo_pairs dp
       JOIN players p1 ON p1.id = dp.set1_player_id
       JOIN players p2 ON p2.id = dp.set2_player_id
+      LEFT JOIN players p3 ON p3.id = dp.player3_id
+      WHERE dp.id = $1
+    `, [req.params.id])
+
+    res.json(fresh.rows[0])
+  } catch (err) { next(err) }
+})
+
+// ── PATCH /api/duo/pairs/:id/swap-sub — trio: swap sub with a playing player ─
+// Admin swaps player3 (sub) with either set1 or set2 player mid-season.
+// Only resets player assignments on PENDING fixtures — completed scores remain.
+router.patch("/pairs/:id/swap-sub", authenticate, adminOnly, async (req, res, next) => {
+  try {
+    const { swapWith } = z.object({
+      swapWith: z.enum(["set1", "set2"]),
+    }).parse(req.body)
+
+    const pairRes = await query("SELECT * FROM duo_pairs WHERE id = $1", [req.params.id])
+    const pair = pairRes.rows[0]
+    if (!pair) return res.status(404).json({ error: "Pair not found" })
+    if (pair.team_type !== "trio") return res.status(400).json({ error: "Only trio teams can swap subs" })
+    if (!pair.player3_id) return res.status(400).json({ error: "No substitute player set for this trio" })
+
+    const subId = pair.player3_id
+    let newSet1Id = pair.set1_player_id
+    let newSet2Id = pair.set2_player_id
+    let newPlayer3Id
+
+    if (swapWith === "set1") {
+      newPlayer3Id = pair.set1_player_id   // old set1 becomes sub
+      newSet1Id    = subId                  // sub takes set1 spot
+    } else {
+      newPlayer3Id = pair.set2_player_id   // old set2 becomes sub
+      newSet2Id    = subId                  // sub takes set2 spot
+    }
+
+    await query(
+      "UPDATE duo_pairs SET set1_player_id = $1, set2_player_id = $2, player3_id = $3 WHERE id = $4",
+      [newSet1Id, newSet2Id, newPlayer3Id, pair.id]
+    )
+
+    // Reset player slot assignments on pending fixtures so admin re-picks for next matchday
+    await query(`
+      UPDATE duo_fixtures SET set1_home_player_id = NULL, set1_away_player_id = NULL
+      WHERE (home_pair_id = $1 OR away_pair_id = $1) AND status = 'pending'
+    `, [pair.id])
+
+    // Recalc MV/form for affected players
+    for (const pid of [...new Set([subId, pair.set1_player_id, pair.set2_player_id])]) {
+      await recalcMarketValue(pid).catch(() => {})
+      await recalcForm(pid).catch(() => {})
+    }
+
+    const fresh = await query(`
+      SELECT dp.id, dp.duo_name AS "duoName",
+        COALESCE(dp.team_type, 'duo') AS "teamType",
+        p1.id AS "set1Id", p1.name AS "set1Name", p1.grade::text AS "set1Grade",
+        p2.id AS "set2Id", p2.name AS "set2Name", p2.grade::text AS "set2Grade",
+        p3.id AS "player3Id", p3.name AS "player3Name", p3.grade::text AS "player3Grade"
+      FROM duo_pairs dp
+      JOIN players p1 ON p1.id = dp.set1_player_id
+      JOIN players p2 ON p2.id = dp.set2_player_id
+      LEFT JOIN players p3 ON p3.id = dp.player3_id
       WHERE dp.id = $1
     `, [req.params.id])
 
@@ -1501,24 +1600,30 @@ router.post("/fixtures/:id/knockout-decider", authenticate, adminOnly, async (re
       // BDR awards
       const winnerPair = winnerPairId === fix.home_pair_id ? homePair : awayPair
       const loserPair  = loserPairId  === fix.home_pair_id ? homePair : awayPair
-      // Duo Tour BDR: Winner=30, Runner-up=20, 3rd(SF loser)=10, QF loser=0
+      // Tour BDR: Winner=30, Runner-up=20, 3rd(SF loser)=10, QF loser=0 (same for Duo & Trio)
       const LOSER_BDR  = { qf: 0, sf: 10, final: 20 }
       const WINNER_BDR = { final: 30 }
       const loserBdr   = LOSER_BDR[fix.knockout_round]
       const winnerBdr  = WINNER_BDR[fix.knockout_round]
-      const duoSn2    = loserPair.season_number
-      const duoLabel2 = duoSn2 ? `S${duoSn2} Duo` : "Duo"
+      const loserSn      = loserPair.season_number
+      const loserTourTag = loserPair.team_type === "trio" ? "Trio" : "Duo"
+      const loserLabel   = loserSn ? `S${loserSn} ${loserTourTag}` : loserTourTag
 
       if (loserBdr && await claimAward(`duo_${fix.knockout_round}_loser`, fix.id)) {
-        for (const pid of [loserPair.set1_player_id, loserPair.set2_player_id].filter(Boolean)) {
-          await upsertBdrForSource(pid, loserBdr, duoLabel2, duoSn2, `duo_s${duoSn2}_player_${pid}`)
+        // Include sub (player3_id) for trio teams
+        const loserPids = [loserPair.set1_player_id, loserPair.set2_player_id, loserPair.player3_id].filter(Boolean)
+        for (const pid of loserPids) {
+          await upsertBdrForSource(pid, loserBdr, loserLabel, loserSn, `duo_s${loserSn}_player_${pid}`)
         }
       }
       if (winnerBdr && await claimAward(`duo_${fix.knockout_round}_winner`, fix.id)) {
-        const duoSn2w   = winnerPair.season_number
-        const duoLabel2w = duoSn2w ? `S${duoSn2w} Duo` : "Duo"
-        for (const pid of [winnerPair.set1_player_id, winnerPair.set2_player_id].filter(Boolean)) {
-          await upsertBdrForSource(pid, winnerBdr, duoLabel2w, duoSn2w, `duo_s${duoSn2w}_player_${pid}`)
+        const winnerSn      = winnerPair.season_number
+        const winnerTourTag = winnerPair.team_type === "trio" ? "Trio" : "Duo"
+        const winnerLabel   = winnerSn ? `S${winnerSn} ${winnerTourTag}` : winnerTourTag
+        // Include sub (player3_id) for trio teams
+        const winnerPids = [winnerPair.set1_player_id, winnerPair.set2_player_id, winnerPair.player3_id].filter(Boolean)
+        for (const pid of winnerPids) {
+          await upsertBdrForSource(pid, winnerBdr, winnerLabel, winnerSn, `duo_s${winnerSn}_player_${pid}`)
         }
       }
 
@@ -1586,7 +1691,11 @@ router.post("/fixtures/:id/knockout-decider", authenticate, adminOnly, async (re
         `, [seasonNum])
         const topScorer = gbRes.rows[0]
         if (topScorer?.goals > 0) {
-          await upsertBdrForSource(topScorer.player_id, 10, `S${seasonNum} Duo Golden Boot`, seasonNum, `duo_golden_boot_s${seasonNum}_player_${topScorer.player_id}`)
+          // Trio Tour Golden Boot = 15 BDR; Duo Tour = 10 BDR
+          const isTrio  = winnerPair.team_type === "trio"
+          const gbBdr   = isTrio ? 15 : 10
+          const gbLabel = `S${seasonNum} ${isTrio ? "Trio" : "Duo"} Golden Boot`
+          await upsertBdrForSource(topScorer.player_id, gbBdr, gbLabel, seasonNum, `duo_golden_boot_s${seasonNum}_player_${topScorer.player_id}`)
           await awardOrReassignTrophy({
             sourceKey:    `duo_golden_boot_s${seasonNum}`,
             trophyColumn: "trophy11_count",
@@ -1707,18 +1816,24 @@ router.post("/fixtures/:id/decider/result", authenticate, adminOnly, async (req,
       const WINNER_BDR = { final: 10 }
       const loserBdr   = LOSER_BDR[fix.knockout_round]
       const winnerBdr  = WINNER_BDR[fix.knockout_round]
-      const duoSn3    = loserPair.season_number
-      const duoLabel3 = duoSn3 ? `S${duoSn3} Duo` : "Duo"
+      const loserSn3      = loserPair.season_number
+      const loserTag3     = loserPair.team_type === "trio" ? "Trio" : "Duo"
+      const loserLabel3   = loserSn3 ? `S${loserSn3} ${loserTag3}` : loserTag3
       if (loserBdr && await claimAward(`duo_${fix.knockout_round}_loser`, fix.id)) {
-        for (const pid of [loserPair.set1_player_id, loserPair.set2_player_id].filter(Boolean)) {
-          await upsertBdrForSource(pid, loserBdr, duoLabel3, duoSn3, `duo_s${duoSn3}_player_${pid}`)
+        // Include sub (player3_id) for trio teams
+        const loserPids3 = [loserPair.set1_player_id, loserPair.set2_player_id, loserPair.player3_id].filter(Boolean)
+        for (const pid of loserPids3) {
+          await upsertBdrForSource(pid, loserBdr, loserLabel3, loserSn3, `duo_s${loserSn3}_player_${pid}`)
         }
       }
       if (winnerBdr && await claimAward(`duo_${fix.knockout_round}_winner`, fix.id)) {
-        const duoSn3w   = winnerPair.season_number
-        const duoLabel3w = duoSn3w ? `S${duoSn3w} Duo` : "Duo"
-        for (const pid of [winnerPair.set1_player_id, winnerPair.set2_player_id].filter(Boolean)) {
-          await upsertBdrForSource(pid, winnerBdr, duoLabel3w, duoSn3w, `duo_s${duoSn3w}_player_${pid}`)
+        const winnerSn3    = winnerPair.season_number
+        const winnerTag3   = winnerPair.team_type === "trio" ? "Trio" : "Duo"
+        const winnerLabel3 = winnerSn3 ? `S${winnerSn3} ${winnerTag3}` : winnerTag3
+        // Include sub (player3_id) for trio teams
+        const winnerPids3 = [winnerPair.set1_player_id, winnerPair.set2_player_id, winnerPair.player3_id].filter(Boolean)
+        for (const pid of winnerPids3) {
+          await upsertBdrForSource(pid, winnerBdr, winnerLabel3, winnerSn3, `duo_s${winnerSn3}_player_${pid}`)
         }
       }
 
@@ -1783,7 +1898,11 @@ router.post("/fixtures/:id/decider/result", authenticate, adminOnly, async (req,
         `, [seasonNum])
         const topScorer = gbRes.rows[0]
         if (topScorer?.goals > 0) {
-          await upsertBdrForSource(topScorer.player_id, 10, `S${seasonNum} Duo Golden Boot`, seasonNum, `duo_golden_boot_s${seasonNum}_player_${topScorer.player_id}`)
+          // Trio Tour Golden Boot = 15 BDR; Duo Tour = 10 BDR
+          const isTrio  = winnerPair.team_type === "trio"
+          const gbBdr   = isTrio ? 15 : 10
+          const gbLabel = `S${seasonNum} ${isTrio ? "Trio" : "Duo"} Golden Boot`
+          await upsertBdrForSource(topScorer.player_id, gbBdr, gbLabel, seasonNum, `duo_golden_boot_s${seasonNum}_player_${topScorer.player_id}`)
           await awardOrReassignTrophy({
             sourceKey:    `duo_golden_boot_s${seasonNum}`,
             trophyColumn: "trophy11_count",

@@ -23,7 +23,6 @@ function getLabelColor(label) {
   if (l.includes("4th") || l.includes("4th place"))                 return "text-slate-400"
   if (l.includes("ucl"))                                             return "text-blue-400"
   if (l.includes("duo"))                                             return "text-emerald-400"
-  if (l.includes("tlg"))                                             return "text-orange-400"
   if (l.includes("ds league") || l.includes("team league") || l.includes("league")) return "text-sky-400"
   if (l.includes("weekly"))                                          return "text-purple-400"
   // S10(Weekly N) style — contains season prefix
@@ -47,7 +46,7 @@ function formatBdrLabel(label, seasonNumber) {
     .replace(/^Weekly /, "Weekly ")
     .replace(/^Duo /, "Duo ")
     .replace(/^UCL /, "UCL ")
-    .replace(/^TLG /, "TLG ")
+    .replace(/^Team League /, "Team League ")
     .replace(/^Team League /, "DS League ")
 
   return s + cleaned

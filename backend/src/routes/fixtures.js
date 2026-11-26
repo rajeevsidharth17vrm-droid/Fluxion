@@ -232,77 +232,14 @@ router.post("/generate", authenticate, adminOnly, async (req, res, next) => {
       return res.status(400).json({ error: "Need at least 2 teams to generate a schedule." })
     }
 
-    // Save the chosen format so close-fixture knows what to do at season end
-    const format = req.body.format === "league" ? "league"
-                 : req.body.format === "group_knockout" ? "group_knockout"
-                 : "league_knockout"
+    // Always use league_knockout — the only supported format
+    const format = "league_knockout"
     await query(`
       INSERT INTO app_settings (key, value) VALUES ('team_league_format', $1)
       ON CONFLICT (key) DO UPDATE SET value = $1
     `, [format])
 
     let fixturesCreated = 0
-
-    if (format === "group_knockout") {
-      const seasonRes = await query("SELECT value FROM app_settings WHERE key = 'current_season'")
-      const season = parseInt(seasonRes.rows[0]?.value || "1")
-
-      // Read group assignments from TLG (most recent TLG season)
-      const tlgRes = await query(`
-        SELECT gt.team_id, g.name AS grp
-        FROM tlg_group_teams gt
-        JOIN tlg_groups g ON g.id = gt.group_id
-        JOIN tlg_seasons s ON s.id = g.season_id
-        WHERE s.season_number = $1
-        ORDER BY g.name ASC, gt.seed ASC
-      `, [season])
-
-      if (tlgRes.rows.length === 0) {
-        return res.status(400).json({ error: "No TLG group assignments found for this season. Please do the TLG draw first." })
-      }
-
-      const groupA = tlgRes.rows.filter(r => r.grp === "A").map(r => r.team_id)
-      const groupB = tlgRes.rows.filter(r => r.grp === "B").map(r => r.team_id)
-
-      if (groupA.length !== 4 || groupB.length !== 4) {
-        return res.status(400).json({ error: `TLG groups must have exactly 4 teams each (Group A: ${groupA.length}, Group B: ${groupB.length})` })
-      }
-
-      // Store group assignments in fixture_groups for knockout use
-      for (const tid of groupA) {
-        await query(`
-          INSERT INTO fixture_groups (team_id, season_number, grp)
-          VALUES ($1, $2, 'A')
-          ON CONFLICT (team_id, season_number) DO UPDATE SET grp = 'A'
-        `, [tid, season])
-      }
-      for (const tid of groupB) {
-        await query(`
-          INSERT INTO fixture_groups (team_id, season_number, grp)
-          VALUES ($1, $2, 'B')
-          ON CONFLICT (team_id, season_number) DO UPDATE SET grp = 'B'
-        `, [tid, season])
-      }
-
-      // Generate home+away fixtures within each group
-      const generateGroupFixtures = async (groupTeams, grpLetter) => {
-        const groupRounds = generateDoubleRoundRobin(groupTeams)
-        for (let i = 0; i < groupRounds.length; i++) {
-          for (const [homeId, awayId] of groupRounds[i]) {
-            await query(
-              "INSERT INTO fixtures (home_team_id, away_team_id, round, scheduled_date, group_stage, grp) VALUES ($1, $2, $3, CURRENT_DATE, true, $4)",
-              [homeId, awayId, i + 1, grpLetter]
-            )
-            fixturesCreated++
-          }
-        }
-      }
-
-      await generateGroupFixtures(groupA, "A")
-      await generateGroupFixtures(groupB, "B")
-
-      return res.json({ success: true, format, groupA, groupB, fixturesGenerated: fixturesCreated })
-    }
 
     const rounds = generateDoubleRoundRobin(teamIds)
     for (let i = 0; i < rounds.length; i++) {
@@ -806,169 +743,7 @@ router.post("/:id/close", authenticate, adminOnly, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// GET /api/fixtures/group-standings — public group standings for group_knockout format
-router.get("/group-standings", async (req, res, next) => {
-  try {
-    const seasonRes = await query("SELECT value FROM app_settings WHERE key = 'current_season'")
-    const season = parseInt(seasonRes.rows[0]?.value || "1")
 
-    // Mirrors the teams-list CTE: for COMPLETED fixtures, use the stored
-    // home_score/away_score (which are the summed match-points totals).
-    // For UPCOMING fixtures that already have player results being logged,
-    // derive the live score from match_records — exactly how the main
-    // league table works so both views stay in sync.
-    const result = await query(`
-      WITH fixture_scores AS (
-        SELECT
-          f.id,
-          f.home_team_id,
-          f.away_team_id,
-          f.status,
-          f.home_goals,
-          f.away_goals,
-          -- Home match-points: use stored value once closed, else sum live records
-          CASE
-            WHEN f.status = 'completed' THEN COALESCE(f.home_score, 0)
-            ELSE COALESCE(SUM(
-              CASE
-                WHEN COALESCE(mr.team_id, p.team_id) = f.home_team_id
-                  THEN CASE mr.result WHEN 'win' THEN 3 WHEN 'draw' THEN 1 ELSE 0 END
-                WHEN COALESCE(mr.team_id, p.team_id) = f.away_team_id
-                  THEN CASE mr.result WHEN 'loss' THEN 3 WHEN 'draw' THEN 1 ELSE 0 END
-                ELSE 0
-              END
-            ), 0)
-          END AS home_pts,
-          -- Away match-points
-          CASE
-            WHEN f.status = 'completed' THEN COALESCE(f.away_score, 0)
-            ELSE COALESCE(SUM(
-              CASE
-                WHEN COALESCE(mr.team_id, p.team_id) = f.away_team_id
-                  THEN CASE mr.result WHEN 'win' THEN 3 WHEN 'draw' THEN 1 ELSE 0 END
-                WHEN COALESCE(mr.team_id, p.team_id) = f.home_team_id
-                  THEN CASE mr.result WHEN 'loss' THEN 3 WHEN 'draw' THEN 1 ELSE 0 END
-                ELSE 0
-              END
-            ), 0)
-          END AS away_pts,
-          -- Goals for home side
-          CASE
-            WHEN f.status = 'completed' THEN COALESCE(f.home_goals, 0)
-            ELSE COALESCE(SUM(
-              CASE
-                WHEN COALESCE(mr.team_id, p.team_id) = f.home_team_id THEN mr.player_score
-                WHEN COALESCE(mr.team_id, p.team_id) = f.away_team_id THEN mr.opponent_score
-                ELSE 0
-              END
-            ), 0)
-          END AS live_home_goals,
-          -- Goals for away side
-          CASE
-            WHEN f.status = 'completed' THEN COALESCE(f.away_goals, 0)
-            ELSE COALESCE(SUM(
-              CASE
-                WHEN COALESCE(mr.team_id, p.team_id) = f.away_team_id THEN mr.player_score
-                WHEN COALESCE(mr.team_id, p.team_id) = f.home_team_id THEN mr.opponent_score
-                ELSE 0
-              END
-            ), 0)
-          END AS live_away_goals,
-          CASE WHEN f.status = 'completed' THEN 1 ELSE COUNT(mr.id) END AS results_logged
-        FROM fixtures f
-        LEFT JOIN match_records mr
-          ON mr.fixture_id = f.id
-          AND mr.match_type = 'league'
-          AND mr.season_number = $1
-        LEFT JOIN players p ON p.id = mr.player_id
-        WHERE f.group_stage = true
-        GROUP BY f.id, f.home_team_id, f.away_team_id, f.status,
-                 f.home_score, f.away_score, f.home_goals, f.away_goals
-      ),
-      fixture_outcomes AS (
-        SELECT *,
-          CASE
-            WHEN results_logged = 0 THEN NULL
-            WHEN home_pts > away_pts THEN 'home'
-            WHEN away_pts > home_pts THEN 'away'
-            ELSE 'draw'
-          END AS outcome
-        FROM fixture_scores
-      ),
-      per_team AS (
-        -- Home side perspective
-        SELECT home_team_id AS team_id, live_home_goals AS gf, live_away_goals AS ga, home_pts AS pts, outcome,
-          (outcome = 'home') AS won, (outcome = 'draw') AS drawn, (outcome = 'away') AS lost
-        FROM fixture_outcomes WHERE outcome IS NOT NULL
-        UNION ALL
-        -- Away side perspective
-        SELECT away_team_id AS team_id, live_away_goals AS gf, live_home_goals AS ga, away_pts AS pts, outcome,
-          (outcome = 'away') AS won, (outcome = 'draw') AS drawn, (outcome = 'home') AS lost
-        FROM fixture_outcomes WHERE outcome IS NOT NULL
-      ),
-      team_stats AS (
-        SELECT team_id,
-          COUNT(*) AS played,
-          COUNT(*) FILTER (WHERE won)   AS won,
-          COUNT(*) FILTER (WHERE drawn) AS drawn,
-          COUNT(*) FILTER (WHERE lost)  AS lost,
-          COALESCE(SUM(gf), 0) AS gf,
-          COALESCE(SUM(ga), 0) AS ga,
-          COALESCE(SUM(pts), 0) AS pts
-        FROM per_team
-        GROUP BY team_id
-      )
-      SELECT
-        fg.grp,
-        t.id       AS "teamId",
-        t.name     AS "teamName",
-        t.logo_url AS "logoUrl",
-        COALESCE(ts.played, 0)::int AS played,
-        COALESCE(ts.won,    0)::int AS won,
-        COALESCE(ts.drawn,  0)::int AS drawn,
-        COALESCE(ts.lost,   0)::int AS lost,
-        COALESCE(ts.gf,     0)::int AS gf,
-        COALESCE(ts.ga,     0)::int AS ga,
-        (COALESCE(ts.gf, 0) - COALESCE(ts.ga, 0))::int AS gd,
-        COALESCE(ts.pts,    0)::int AS pts,
-        -- Player matches logged in the CURRENT round fixture for this team.
-        -- Current round = lowest round where status != 'completed' (same logic as
-        -- TeamResults.jsx). Falls back to MAX(round) when all fixtures are done.
-        COALESCE((
-          SELECT COUNT(mr.id)
-          FROM match_records mr
-          JOIN fixtures f2 ON f2.id = mr.fixture_id
-          WHERE (f2.home_team_id = t.id OR f2.away_team_id = t.id)
-            AND f2.group_stage = true
-            AND f2.round = (
-              SELECT COALESCE(
-                MIN(f3.round) FILTER (WHERE f3.status != 'completed'),
-                MAX(f3.round)
-              )
-              FROM fixtures f3
-              WHERE (f3.home_team_id = t.id OR f3.away_team_id = t.id)
-                AND f3.group_stage = true
-            )
-            AND mr.match_type = 'league'
-            AND mr.season_number = $1
-        ), 0)::int AS "currentMatchesLogged",
-        -- Number of players in this team
-        (SELECT COUNT(*) FROM players p3 WHERE p3.team_id = t.id)::int AS "teamPlayerCount" 
-      FROM fixture_groups fg
-      JOIN teams t ON t.id = fg.team_id
-      LEFT JOIN team_stats ts ON ts.team_id = t.id
-      WHERE fg.season_number = $1
-      ORDER BY fg.grp ASC, pts DESC, gd DESC, gf DESC
-    `, [season])
-
-    const groups = { A: [], B: [] }
-    for (const row of result.rows) {
-      const grp = row.grp?.trim()
-      if (groups[grp]) groups[grp].push(row)
-    }
-    res.json(groups)
-  } catch (err) { next(err) }
-})
 router.get("/format/public", async (req, res, next) => {
   try {
     const [formatRes, champRes] = await Promise.all([
@@ -1000,8 +775,6 @@ router.get("/format", authenticate, adminOnly, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// PATCH /api/fixtures/format — change the team league format mid-season.
-// Allowed any time while at least one fixture is still not completed.
 // POST /api/fixtures/:id/reopen — admin reopens a completed fixture so team owners
 // can continue logging player results. Reverses the played/won/drawn/lost team stats
 // that were applied when the fixture was closed.
@@ -1079,28 +852,9 @@ router.post("/:id/reopen", authenticate, adminOnly, async (req, res, next) => {
   } catch (err) { next(err) }
 })
 
-// Locked once the last fixture is closed (that's when the format triggers).
-router.patch("/format", authenticate, adminOnly, async (req, res, next) => {
-  try {
-    const { format } = req.body
-    if (!["league", "league_knockout"].includes(format)) {
-      return res.status(400).json({ error: "Format must be 'league' or 'league_knockout'" })
-    }
-
-    // Check if any fixtures still pending — if all done, it's too late to change
-    const pendingRes = await query(`SELECT COUNT(*) FROM fixtures WHERE status != 'completed'`)
-    const pending = parseInt(pendingRes.rows[0].count)
-    if (pending === 0) {
-      return res.status(400).json({ error: "Cannot change format — all fixtures are already completed." })
-    }
-
-    await query(`
-      INSERT INTO app_settings (key, value) VALUES ('team_league_format', $1)
-      ON CONFLICT (key) DO UPDATE SET value = $1
-    `, [format])
-
-    res.json({ success: true, format, pendingFixtures: pending })
-  } catch (err) { next(err) }
+// PATCH /format — no-op, league_knockout is the only format
+router.patch("/format", authenticate, adminOnly, (_req, res) => {
+  res.json({ success: true, format: "league_knockout" })
 })
 
 router.patch("/round/:round/date", authenticate, adminOnly, async (req, res, next) => {
