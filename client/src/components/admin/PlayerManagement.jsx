@@ -457,13 +457,13 @@ function EditableRow({ player, onPlayerClick, trophyYearOptions = [] }) {
               </div>
               {[
                 { label: "Ballon d'Or",               value: trophy1,  onChange: setTrophy1 },
-                { label: "Dshann League",              value: trophy2,  onChange: setTrophy2 },
-                { label: "UCL",                        value: trophy4,  onChange: setTrophy4 },
-                { label: "Weekly",                     value: trophy3,  onChange: setTrophy3 },
+                { label: "Auction Tour",              value: trophy2,  onChange: setTrophy2 },
+                { label: "Solo Tour",                        value: trophy4,  onChange: setTrophy4 },
+                { label: "Weekend Tour",                     value: trophy3,  onChange: setTrophy3 },
                 { label: "Weekly Golden Boot",         value: trophy5,  onChange: setTrophy5 },
-                { label: "Dshann League Golden Boot",  value: trophy6,  onChange: setTrophy6 },
+                { label: "Auction Tour Golden Boot",  value: trophy6,  onChange: setTrophy6 },
                 { label: "UCL Golden Boot",            value: trophy7,  onChange: setTrophy7 },
-                { label: "Revolution",                 value: trophy8,  onChange: setTrophy8 },
+                { label: "Quick Tour",                 value: trophy8,  onChange: setTrophy8 },
                 { label: "Week Best Player",           value: trophy13, onChange: setTrophy13 },
                 { label: "Duo Tournament",             value: trophy10, onChange: setTrophy10 },
                 { label: "Duo Golden Boot",            value: trophy11, onChange: setTrophy11 },

@@ -31,7 +31,7 @@ export default function UclKnockoutAdmin() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Trophy className="w-4 h-4 text-accent" />
-          <h2 className="text-sm font-semibold text-white">UCL Knockout Stage</h2>
+          <h2 className="text-sm font-semibold text-white">Solo Tour Knockout Stage</h2>
         </div>
         {!showCreate && (
           <button onClick={() => setShowCreate(true)}

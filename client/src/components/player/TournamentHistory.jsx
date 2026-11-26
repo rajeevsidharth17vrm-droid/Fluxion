@@ -6,9 +6,9 @@ import { cn } from "../../lib/utils"
 
 const VIEWS = [
   { value: "overall",    label: "Overall"    },
-  { value: "weekly",     label: "Weekly"     },
-  { value: "revolution", label: "Revolution" },
-  { value: "ucl",       label: "UCL"        },
+  { value: "weekly",     label: "Weekend Tour"     },
+  { value: "revolution", label: "Quick Tour" },
+  { value: "ucl",       label: "Solo Tour"        },
   { value: "duo",       label: "Duo"        },
 ]
 
@@ -202,7 +202,7 @@ export default function TournamentHistory({ playerId }) {
           <div>
             {view === "overall"    && <OverallView history={history} />}
             {view === "weekly"     && <SimpleKOView data={history?.weekly}    name="Weekly" />}
-            {view === "revolution" && <SimpleKOView data={history?.revolution} name="Revolution" />}
+            {view === "revolution" && <SimpleKOView data={history?.revolution} name="Quick Tour" />}
             {view === "ucl"        && <UclView  data={history?.ucl} />}
             {view === "duo"        && <DuoView  data={history?.duo} />}
           </div>

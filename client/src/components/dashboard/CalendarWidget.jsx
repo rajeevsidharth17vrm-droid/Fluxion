@@ -12,7 +12,7 @@ const TOURNAMENT_COLORS = {
   auction:     "bg-emerald-400/20 text-emerald-400 border-emerald-400/40",
 }
 const TOURNAMENT_LABELS = {
-  team_league: "Team League", weekly: "Weekly", ucl: "UCL", playoff: "Playoff", auction: "Auction"
+  team_league: "Team League", weekly: "Weekly", ucl:   "Solo Tour", playoff: "Playoff", auction: "Auction"
 }
 
 export default function CalendarWidget() {

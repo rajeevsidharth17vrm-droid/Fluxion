@@ -81,11 +81,11 @@ function SeasonDetail({ record }) {
           <TrophyRow image={goldenBootImg}    label="Golden Boot"    winner={record.top_scorer} sub={`${record.top_scorer_goals ?? 0} goals`} />
           <TrophyRow
             image={teamLeagueImg}
-            label="Dshann League"
+            label="Auction Tour"
             winner={record.team_league_winner}
             sub={squadPlayers.length > 0 ? `Squad: ${squadPlayers.join(", ")}` : null}
           />
-          <TrophyRow image={uclImg}           label="UCL"            winner={record.ucl_winner} />
+          <TrophyRow image={uclImg}           label=  "Solo Tour"            winner={record.ucl_winner} />
           <TrophyRow
             image={championshipImg}
             label="Team Championship"
@@ -155,7 +155,7 @@ export default function HallOfFame() {
           <div className="absolute inset-0 bg-gradient-to-br from-gold/5 via-transparent to-accent/5" />
           <Crown className="w-10 h-10 text-gold mx-auto mb-3" />
           <h1 className="text-3xl font-extrabold text-white mb-1">Hall of Fame</h1>
-          <p className="text-slate-400 text-sm">Tamil Efootballers League · Season History</p>
+          <p className="text-slate-400 text-sm">Fluxion Arena League · Season History</p>
         </div>
 
         {isLoading ? (

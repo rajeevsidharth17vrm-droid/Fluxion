@@ -422,7 +422,7 @@ const BracketRoundCard = forwardRef(function BracketRoundCard({ tournamentName, 
         padding: "18px 24px 14px",
         borderBottom: "1px solid #1e293b",
       }}>
-        <p style={{ margin: 0, fontSize: 10, color: "#64748b", letterSpacing: 3, textTransform: "uppercase" }}>Tamil eFootball League</p>
+        <p style={{ margin: 0, fontSize: 10, color: "#64748b", letterSpacing: 3, textTransform: "uppercase" }}>Fluxion Arena League</p>
         <p style={{ margin: "3px 0 0", fontSize: 18, fontWeight: 900, color: "#f1f5f9" }}>{tournamentName}</p>
         <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 700, color: "#7c3aed" }}>{roundLabel}</p>
       </div>

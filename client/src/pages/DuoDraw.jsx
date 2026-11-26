@@ -114,7 +114,7 @@ export default function DuoDraw() {
       <div className="flex items-center gap-3 mb-12">
         <Users className="w-8 h-8 text-accent" />
         <div>
-          <p className="text-xs text-slate-500 uppercase tracking-widest">Tamil Efootballers</p>
+          <p className="text-xs text-slate-500 uppercase tracking-widest">Fluxion Arena</p>
           <p className="text-xl font-extrabold text-white">Duo Tournament — Season {season} Draw</p>
         </div>
       </div>

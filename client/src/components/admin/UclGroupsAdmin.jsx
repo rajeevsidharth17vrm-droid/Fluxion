@@ -333,7 +333,7 @@ export default function UclGroupsAdmin() {
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
           <Users className="w-4 h-4 text-accent" />
-          <h2 className="text-sm font-semibold text-white">UCL Groups</h2>
+          <h2 className="text-sm font-semibold text-white">Solo Tour Groups</h2>
           {unassigned.length > 0 && (
             <span className="text-xs text-slate-500">{unassigned.length} unassigned</span>
           )}
@@ -386,7 +386,7 @@ export default function UclGroupsAdmin() {
       {pendingGroups.length > 0 && !showGenerate && (
         <div className="card px-5 py-4 flex items-center justify-between border-amber-400/20">
           <div>
-            <p className="text-sm font-semibold text-white">UCL Group Draw Ready</p>
+            <p className="text-sm font-semibold text-white">Solo Tour Group Draw Ready</p>
             <p className="text-xs text-slate-500 mt-0.5">
               {pendingGroups.length} groups · {pendingGroups.reduce((s, g) => s + g.players.length, 0)} players · Draw not started yet
             </p>

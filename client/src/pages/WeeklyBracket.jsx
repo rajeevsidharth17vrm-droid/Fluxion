@@ -506,7 +506,7 @@ const BracketRoundCard = forwardRef(function BracketRoundCard({ tournamentName, 
         borderBottom: "1px solid #1e293b",
       }}>
         <p style={{ margin: 0, fontSize: 10, color: "#64748b", letterSpacing: 3, textTransform: "uppercase" }}>
-          Tamil eFootball League
+          Fluxion Arena League
         </p>
         <p style={{ margin: "3px 0 0", fontSize: 18, fontWeight: 900, color: "#f1f5f9" }}>
           {tournamentName}

@@ -108,8 +108,8 @@ export default function Navbar() {
             <Link to="/" className="flex items-center gap-2 sm:gap-2.5 group min-w-0 flex-shrink-0">
               <img src="/logo.png" alt="TEC Logo" className="w-9 h-9 sm:w-14 sm:h-14 rounded-lg object-cover flex-shrink-0" />
               <div className="flex flex-col leading-none min-w-0">
-                <span className="text-xs sm:text-sm font-bold text-white tracking-wide truncate">Tamil</span>
-                <span className="text-[10px] sm:text-xs text-accent font-semibold tracking-widest uppercase truncate">Efootballers</span>
+                <span className="text-xs sm:text-sm font-bold text-white tracking-wide truncate">Fluxion Arena</span>
+                <span className="text-[10px] sm:text-xs text-accent font-semibold tracking-widest uppercase truncate">Arena</span>
               </div>
             </Link>
 

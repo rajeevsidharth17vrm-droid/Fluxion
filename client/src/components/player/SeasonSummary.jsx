@@ -4,10 +4,10 @@ import { cn } from "../../lib/utils"
 
 const MATCH_TYPE_OPTIONS = [
   { value: "all",        label: "Total matches"  },
-  { value: "league",     label: "Dshann League"  },
-  { value: "ucl",        label: "UCL"            },
-  { value: "weekly",     label: "Weekly"         },
-  { value: "revolution", label: "Revolution"     },
+  { value: "league",     label: "Auction Tour"  },
+  { value: "ucl",        label: "Solo Tour"            },
+  { value: "weekly",     label: "Weekend Tour"         },
+  { value: "revolution", label: "Quick Tour"     },
   { value: "duo",        label: "Duo Tournament" },
 ]
 

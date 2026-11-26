@@ -50,7 +50,7 @@ export default function UclKnockoutDashboard() {
     return (
       <div className="text-center py-10">
         <Trophy className="w-8 h-8 text-slate-700 mx-auto mb-2" />
-        <p className="text-slate-500 text-sm font-semibold">UCL Knockout not started yet</p>
+        <p className="text-slate-500 text-sm font-semibold">Solo Tour Knockout not started yet</p>
         <p className="text-slate-600 text-xs mt-1">Available once the draw is complete</p>
       </div>
     )
@@ -82,7 +82,7 @@ export default function UclKnockoutDashboard() {
         <div className="flex items-center gap-2 mb-4 px-3 py-2 rounded-xl bg-gold/10 border border-gold/20">
           <Trophy className="w-4 h-4 text-gold flex-shrink-0" />
           <span className="text-sm font-bold text-gold">{champion}</span>
-          <span className="text-xs text-slate-400">UCL Champion</span>
+          <span className="text-xs text-slate-400">Solo Tour Champion</span>
         </div>
       )}
 

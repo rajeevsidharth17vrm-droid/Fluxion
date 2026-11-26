@@ -25,7 +25,7 @@ export default function StandingsExport() {
     try {
       const dataUrl = await toPng(exportRef.current, { cacheBust: true, pixelRatio: 2 })
       const link = document.createElement("a")
-      link.download = `Dshann-League-Standings.png`
+      link.download = `Auction-Tour-Standings.png`
       link.href = dataUrl
       link.click()
     } catch (e) {
@@ -42,7 +42,7 @@ export default function StandingsExport() {
           <TableProperties className="w-4 h-4 text-accent" />
           <div>
             <p className="text-sm font-semibold text-white">League Standings Export</p>
-            <p className="text-xs text-slate-500">Export current Dshann League table as a PNG image</p>
+            <p className="text-xs text-slate-500">Export current Auction Tour table as a PNG image</p>
           </div>
         </div>
         <button
@@ -146,10 +146,10 @@ const StandingsCard = forwardRef(function StandingsCard({ teams }, ref) {
             style={{ width: 56, height: 56, objectFit: "contain", borderRadius: 12, flexShrink: 0 }} />
           <div>
             <p style={{ margin: 0, fontSize: 11, color: "#64748b", letterSpacing: 3, textTransform: "uppercase" }}>
-              Tamil eFootball League
+              Fluxion Arena League
             </p>
             <p style={{ margin: "5px 0 0", fontSize: 24, fontWeight: 900, color: "#f1f5f9", letterSpacing: 0.5 }}>
-              DSHANN LEAGUE
+              AUCTION TOUR
             </p>
             <p style={{ margin: "2px 0 0", fontSize: 12, color: "#60a5fa", fontWeight: 600, letterSpacing: 1 }}>
               SEASON STANDINGS

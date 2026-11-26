@@ -23,14 +23,14 @@ import championshipTrophy from "../../images/championship.png"
 
 const TROPHY_TYPES = [
   { key: "trophy1Count",  image: ballondorTrophy,    label: "Ballon d'Or",        color: "#f59e0b", glow: "rgba(245,158,11,0.45)"  },
-  { key: "trophy2Count",  image: teamLeagueTrophy,   label: "Dshann League",      color: "#10b981", glow: "rgba(16,185,129,0.45)"  },
-  { key: "trophy4Count",  image: uclTrophy,          label: "UCL",                color: "#818cf8", glow: "rgba(129,140,248,0.45)" },
-  { key: "trophy3Count",  image: weeklyTrophy,       label: "Weekly",             color: "#38bdf8", glow: "rgba(56,189,248,0.45)"  },
+  { key: "trophy2Count",  image: teamLeagueTrophy,   label: "Auction Tour",      color: "#10b981", glow: "rgba(16,185,129,0.45)"  },
+  { key: "trophy4Count",  image: uclTrophy,          label: "Solo Tour",                color: "#818cf8", glow: "rgba(129,140,248,0.45)" },
+  { key: "trophy3Count",  image: weeklyTrophy,       label: "Weekend Tour",             color: "#38bdf8", glow: "rgba(56,189,248,0.45)"  },
   { key: "trophy5Count",  image: goldenBootTrophy,   label: "Weekly Golden Boot", color: "#fbbf24", glow: "rgba(251,191,36,0.45)"  },
   { key: "trophy13Count", image: weekBestTrophy,     label: "Weekly Best Player", color: "#06b6d4", glow: "rgba(6,182,212,0.45)"   },
   { key: "trophy6Count",  image: teamLeagueGBTrophy, label: "League Golden Boot", color: "#34d399", glow: "rgba(52,211,153,0.45)"  },
   { key: "trophy7Count",  image: uclGBTrophy,        label: "UCL Golden Boot",    color: "#a78bfa", glow: "rgba(167,139,250,0.45)" },
-  { key: "trophy8Count",  image: revolutionTrophy,   label: "Revolution",         color: "#f43f5e", glow: "rgba(244,63,94,0.45)"   },
+  { key: "trophy8Count",  image: revolutionTrophy,   label: "Quick Tour",         color: "#f43f5e", glow: "rgba(244,63,94,0.45)"   },
   { key: "trophy9Count",  image: europaTrophy,       label: "Europa",             color: "#8b5cf6", glow: "rgba(139,92,246,0.45)"  },
   { key: "trophy10Count", image: duoTrophy,          label: "Duo Tournament",     color: "#fb923c", glow: "rgba(251,146,60,0.45)"  },
   { key: "trophy11Count", image: duoBootTrophy,      label: "Duo Golden Boot",    color: "#f97316", glow: "rgba(249,115,22,0.45)"  },
@@ -232,11 +232,11 @@ export default function PlayerTrophyCabinet() {
         {[
           { id: "all",        label: "All" },
           { id: "bdr",        label: "Ballon d'Or" },
-          { id: "league",     label: "Dshann League" },
-          { id: "ucl",        label: "UCL" },
-          { id: "weekly",     label: "Weekly" },
+          { id: "league",     label: "Auction Tour" },
+          { id: "ucl",        label: "Solo Tour" },
+          { id: "weekly",     label: "Weekend Tour" },
           { id: "weekbest",   label: "Week Best" },
-          { id: "revolution", label: "Revolution" },
+          { id: "revolution", label: "Quick Tour" },
           { id: "duo",          label: "Duo" },
           { id: "championship", label: "Championship" },
         ].map(f => (
@@ -289,7 +289,7 @@ export default function PlayerTrophyCabinet() {
             <div className="flex items-center gap-3">
               <div className="w-1 h-8 rounded-full bg-gold" style={{ boxShadow: "0 0 8px rgba(245,158,11,0.6)" }} />
               <div>
-                <p className="text-[9px] text-slate-600 uppercase tracking-[0.2em]">Tamil Efootballers</p>
+                <p className="text-[9px] text-slate-600 uppercase tracking-[0.2em]">Fluxion Arena</p>
                 <p className="text-sm font-bold text-white">{player.name}'s Trophy Cabinet</p>
               </div>
             </div>

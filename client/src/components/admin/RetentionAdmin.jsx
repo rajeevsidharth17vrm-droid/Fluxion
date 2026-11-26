@@ -299,7 +299,7 @@ async function generateRetentionImage(teams, configs) {
 
   ctx.fillStyle = "#64748b"
   ctx.font      = "13px sans-serif"
-  ctx.fillText("Tamil Efootballers  ·  DHSANN League", totalW / 2, 116)
+  ctx.fillText("Fluxion Arena  ·  DHSANN League", totalW / 2, 116)
 
   // Divider
   ctx.strokeStyle = "rgba(255,255,255,0.08)"
@@ -467,7 +467,7 @@ async function generateRetentionImage(teams, configs) {
   ctx.fillStyle = "#1e293b"
   ctx.font      = "11px sans-serif"
   ctx.textAlign = "center"
-  ctx.fillText("Tamil Efootballers  ·  DHSANN League", totalW / 2, totalH - 14)
+  ctx.fillText("Fluxion Arena  ·  DHSANN League", totalW / 2, totalH - 14)
 
   return canvas
 }

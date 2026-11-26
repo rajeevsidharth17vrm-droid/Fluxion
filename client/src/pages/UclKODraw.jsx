@@ -64,7 +64,7 @@ export default function UclKODraw() {
       <div className="flex items-center gap-3 mb-10">
         <Trophy className="w-8 h-8 text-accent" />
         <div>
-          <p className="text-xs text-slate-500 uppercase tracking-widest">UCL Knockout</p>
+          <p className="text-xs text-slate-500 uppercase tracking-widest">Solo Tour Knockout</p>
           <p className="text-xl font-extrabold text-white">{tournament?.name || "UCL Knockout Draw"}</p>
         </div>
       </div>

@@ -140,11 +140,11 @@ export default function StandingsTable({ teams, players, onPlayerClick, view: co
         <div className="flex items-center gap-3">
           <img
             src={view === "scorers" ? goldenBoot : teamLeagueTrophy}
-            alt={view === "scorers" ? "Golden Boot" : "Dshann League"}
+            alt={view === "scorers" ? "Golden Boot" : "Auction Tour"}
             className="w-9 h-9 object-contain flex-shrink-0"
           />
           <div>
-            <p className="section-label mb-0.5">Dshann League</p>
+            <p className="section-label mb-0.5">Auction Tour</p>
             <h2 className="text-base font-semibold text-white">
               {view === "table" ? "Season standings" : view === "fixtures" ? "Fixtures" : view === "playoffs" ? "Playoffs" : view === "teamknockout" ? "Team Knockout" : "Golden Boot"}
             </h2>
@@ -264,7 +264,7 @@ export default function StandingsTable({ teams, players, onPlayerClick, view: co
                 <div className="flex items-center justify-center gap-2 mb-6 text-gold">
                   <Trophy className="w-5 h-5" />
                   <span className="font-bold text-lg">{championName}</span>
-                  <span className="text-sm text-slate-400">are Dshann League Champions!</span>
+                  <span className="text-sm text-slate-400">are Auction Tour Champions!</span>
                 </div>
               )}
               <div className="flex flex-col items-center gap-6">

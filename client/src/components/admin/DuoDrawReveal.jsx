@@ -356,7 +356,7 @@ export default function DuoDrawReveal() {
         <img src={logoUrl} style={{ width: 64, height: 64, objectFit: "contain", opacity: 0.9, marginBottom: 28 }} />
 
         <p style={{ fontSize: 11, color: "#334155", textTransform: "uppercase", letterSpacing: 4, margin: "0 0 10px" }}>
-          Tamil Efootballers · Duo Tournament
+          Fluxion Arena · Duo Tournament
         </p>
         <h1 style={{ fontSize: 32, fontWeight: 900, margin: "0 0 6px", lineHeight: 1.15 }}>
           Group Stage Draw
@@ -448,7 +448,7 @@ export default function DuoDrawReveal() {
         <img src={logoUrl} style={{ width: 38, height: 38, objectFit: "contain", flexShrink: 0 }} />
         <div>
           <p style={{ color: "#334155", fontSize: 10, textTransform: "uppercase", letterSpacing: 3, margin: "0 0 2px" }}>
-            Tamil Efootballers · Duo Tournament
+            Fluxion Arena · Duo Tournament
           </p>
           <p style={{ color: "white", fontSize: 18, fontWeight: 800, margin: 0 }}>
             Group Stage Draw — Season {season}

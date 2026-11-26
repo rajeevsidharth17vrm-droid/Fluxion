@@ -320,7 +320,7 @@ export default function RevolutionBracket() {
             className="flex items-center gap-2 text-slate-400 hover:text-white text-sm transition-colors">
             <ArrowLeft className="w-4 h-4" /> Admin
           </button>
-          <img src={revolutionLogo} alt="Revolution Trophy" className="w-6 h-6 object-contain flex-shrink-0" />
+          <img src={revolutionLogo} alt="Quick Tour Trophy" className="w-6 h-6 object-contain flex-shrink-0" />
           <h1 className="text-lg font-extrabold text-white">{tournament.name}</h1>
           {tournament.status === "completed" && (
             <span className="flex items-center gap-1 text-xs font-bold text-emerald-400 bg-emerald-400/10 border border-emerald-400/25 px-2 py-0.5 rounded-full">
@@ -476,7 +476,7 @@ const BracketRoundCard = forwardRef(function BracketRoundCard({ tournamentName, 
         padding: "18px 24px 14px",
         borderBottom: "1px solid #1e293b",
       }}>
-        <p style={{ margin: 0, fontSize: 10, color: "#64748b", letterSpacing: 3, textTransform: "uppercase" }}>Tamil eFootball League</p>
+        <p style={{ margin: 0, fontSize: 10, color: "#64748b", letterSpacing: 3, textTransform: "uppercase" }}>Fluxion Arena League</p>
         <p style={{ margin: "3px 0 0", fontSize: 18, fontWeight: 900, color: "#f1f5f9" }}>{tournamentName}</p>
         <p style={{ margin: "2px 0 0", fontSize: 13, fontWeight: 700, color: "#7c3aed" }}>{roundLabel}</p>
       </div>

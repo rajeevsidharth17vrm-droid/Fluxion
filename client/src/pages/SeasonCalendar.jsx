@@ -9,8 +9,8 @@ import { cn } from "../lib/utils"
 
 const TOURNAMENTS = {
   team_league: { label: "Team League", short: "TL", color: "bg-gold/20 text-gold border-gold/40",        dot: "bg-gold",         icon: Trophy },
-  weekly:      { label: "Weekly",      short: "WK", color: "bg-blue-400/20 text-blue-400 border-blue-400/40", dot: "bg-blue-400",  icon: Zap    },
-  ucl:         { label: "UCL",         short: "UCL",color: "bg-violet-400/20 text-violet-400 border-violet-400/40", dot: "bg-violet-400", icon: Star  },
+  weekly:      { label: "Weekend Tour",      short: "WK", color: "bg-blue-400/20 text-blue-400 border-blue-400/40", dot: "bg-blue-400",  icon: Zap    },
+  ucl:         { label: "Solo Tour",         short:   "Solo Tour",color: "bg-violet-400/20 text-violet-400 border-violet-400/40", dot: "bg-violet-400", icon: Star  },
   playoff:     { label: "Playoff",     short: "PO", color: "bg-orange-400/20 text-orange-400 border-orange-400/40", dot: "bg-orange-400", icon: Trophy },
   auction:     { label: "Auction",     short: "AUC",color: "bg-emerald-400/20 text-emerald-400 border-emerald-400/40", dot: "bg-emerald-400", icon: Gavel },
 }

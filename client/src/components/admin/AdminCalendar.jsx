@@ -6,8 +6,8 @@ import { cn } from "../../lib/utils"
 
 const TOURNAMENTS = [
   { value: "team_league", label: "Team League" },
-  { value: "weekly",      label: "Weekly Tournament" },
-  { value: "ucl",         label: "UCL" },
+  { value: "weekly",      label: "Weekend Tour" },
+  { value: "ucl",         label: "Solo Tour" },
   { value: "playoff",     label: "Playoff" },
   { value: "auction",     label: "Auction" },
 ]
@@ -216,7 +216,7 @@ function effectiveStatus(ev) {
   return eventDate < today ? "completed" : "upcoming"
 }
 
-const TOURNAMENT_LABELS = { team_league: "Team League", weekly: "Weekly", ucl: "UCL", playoff: "Playoff", auction: "Auction" }
+const TOURNAMENT_LABELS = { team_league: "Team League", weekly: "Weekend Tour", ucl:   "Solo Tour", playoff: "Playoff", auction: "Auction" }
 const TOURNAMENT_COLORS = { team_league: "text-gold", weekly: "text-blue-400", ucl: "text-violet-400", playoff: "text-orange-400", auction: "text-emerald-400" }
 
 export default function AdminCalendar() {

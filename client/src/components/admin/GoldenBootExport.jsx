@@ -19,7 +19,7 @@ export default function GoldenBootExport() {
     try {
       const dataUrl = await toPng(exportRef.current, { cacheBust: true, pixelRatio: 2 })
       const link = document.createElement("a")
-      link.download = "Dshann-League-Golden-Boot.png"
+      link.download = "Auction-Tour-Golden-Boot.png"
       link.href = dataUrl
       link.click()
     } catch (e) {
@@ -128,13 +128,13 @@ const GoldenBootCard = forwardRef(function GoldenBootCard({ scorers }, ref) {
             style={{ width: 56, height: 56, objectFit: "contain", borderRadius: 12, flexShrink: 0 }} />
           <div>
             <p style={{ margin: 0, fontSize: 11, color: "#64748b", letterSpacing: 3, textTransform: "uppercase" }}>
-              Tamil eFootball League
+              Fluxion Arena League
             </p>
             <p style={{ margin: "5px 0 0", fontSize: 24, fontWeight: 900, color: "#f1f5f9", letterSpacing: 0.5 }}>
               GOLDEN BOOT
             </p>
             <p style={{ margin: "2px 0 0", fontSize: 12, color: "#f59e0b", fontWeight: 600, letterSpacing: 1 }}>
-              DSHANN LEAGUE · TOP SCORERS
+              AUCTION TOUR · TOP SCORERS
             </p>
           </div>
         </div>

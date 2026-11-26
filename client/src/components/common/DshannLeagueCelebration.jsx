@@ -54,7 +54,7 @@ export default function DshannLeagueCelebration({ teamName, teamLogo, scorer, pl
             <TrophySparkles />
             <img
               src={teamLeagueTrophy}
-              alt="Dshann League Trophy"
+              alt="Auction Tour Trophy"
               className="relative w-full h-auto object-contain animate-trophy-reveal"
             />
           </div>

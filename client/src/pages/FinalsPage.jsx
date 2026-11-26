@@ -249,7 +249,7 @@ export default function FinalsPage() {
 
         {/* Title */}
         <div style={{ textAlign: "center", marginBottom: 32 }}>
-          <p style={{ color: "#334155", fontSize: 11, textTransform: "uppercase", letterSpacing: 4, margin: "0 0 8px" }}>Tamil Efootballers · Finals</p>
+          <p style={{ color: "#334155", fontSize: 11, textTransform: "uppercase", letterSpacing: 4, margin: "0 0 8px" }}>Fluxion Arena · Finals</p>
           <h1 style={{ fontSize: 28, fontWeight: 900, margin: "0 0 6px" }}>
             {team1Name} <span style={{ color: "#334155" }}>vs</span> {team2Name}
           </h1>

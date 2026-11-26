@@ -46,7 +46,7 @@ function CreateForm({ onClose }) {
 
   return (
     <div className="card p-5 space-y-4 mb-5">
-      <h3 className="text-sm font-semibold text-white">Create Revolution Trophy</h3>
+      <h3 className="text-sm font-semibold text-white">Create Quick Tour Trophy</h3>
 
       {step === "name" && (
         <>
@@ -55,7 +55,7 @@ function CreateForm({ onClose }) {
             <input
               value={name} onChange={e => setName(e.target.value)}
               onKeyDown={e => e.key === "Enter" && name.trim() && setStep("players")}
-              placeholder="e.g. Revolution Trophy #1"
+              placeholder="e.g. Quick Tour Trophy #1"
               className="w-full bg-pitch-800 border border-surface-border rounded-lg px-3 py-2.5 text-sm text-white focus:outline-none focus:border-accent/40"
             />
           </div>
@@ -134,7 +134,7 @@ export default function RevolutionAdmin() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Swords className="w-4 h-4 text-rose-400" />
-          <h2 className="text-sm font-semibold text-white">Revolution Trophy</h2>
+          <h2 className="text-sm font-semibold text-white">Quick Tour Trophy</h2>
         </div>
         {!showCreate && (
           <button onClick={() => setShowCreate(true)}
@@ -151,7 +151,7 @@ export default function RevolutionAdmin() {
       ) : tournaments.length === 0 && !showCreate ? (
         <div className="card px-5 py-10 text-center">
           <Swords className="w-8 h-8 text-slate-600 mx-auto mb-3" />
-          <p className="text-slate-400 text-sm">No Revolution Trophy tournaments yet</p>
+          <p className="text-slate-400 text-sm">No Quick Tour tournaments yet</p>
           <p className="text-slate-600 text-xs mt-1">Click "New Tournament" to create one</p>
         </div>
       ) : (

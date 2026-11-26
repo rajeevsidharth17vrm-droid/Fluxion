@@ -11,10 +11,10 @@ import { useRankChanges } from "../hooks/useRankChanges"
 
 const TYPES = [
   { id: "overall",    label: "Overall"          },
-  { id: "league",     label: "Dshann League"    },
-  { id: "weekly",     label: "Weekly"           },
-  { id: "ucl",        label: "UCL"              },
-  { id: "revolution", label: "Revolution Trophy" },
+  { id: "league",     label: "Auction Tour"    },
+  { id: "weekly",     label: "Weekend Tour"           },
+  { id: "ucl",        label: "Solo Tour"              },
+  { id: "revolution", label: "Quick Tour Trophy" },
 ]
 
 const FormDot = ({ result }) => {

@@ -45,7 +45,7 @@ export default function RevolutionCelebration({ name, avatarThumb, anthemUrl, on
             <TrophySparkles />
             <img
               src={revTrophyImg}
-              alt="Revolution Trophy"
+              alt="Quick Tour Trophy"
               className="relative w-full h-auto object-contain animate-trophy-reveal"
             />
           </div>

@@ -839,7 +839,7 @@ function DuoExportCard({ round, fixtures, exportRef, visible, season }) {
         <img src={logoUrl} alt="TEC" style={{ width: 48, height: 48, objectFit: "contain" }} />
         <div>
           <p style={{ color: "#64748b", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, margin: 0 }}>
-            Tamil Efootballers · Duo Tournament S{season}
+            Fluxion Arena · Duo Tournament S{season}
           </p>
           <p style={{ color: "#ffffff", fontSize: 26, fontWeight: 800, margin: 0 }}>Round {round} Fixtures</p>
         </div>
@@ -915,7 +915,7 @@ function KnockoutExportCard({ round, fixtures, exportRef, visible, season }) {
         <img src={logoUrl} alt="TEC" style={{ width: 48, height: 48, objectFit: "contain" }} />
         <div>
           <p style={{ color: "#64748b", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, margin: 0 }}>
-            Tamil Efootballers · Duo Tournament S{season}
+            Fluxion Arena · Duo Tournament S{season}
           </p>
           <p style={{ color: "#ffffff", fontSize: 26, fontWeight: 800, margin: 0 }}>
             {ROUND_LABELS[round] || round} Fixtures

@@ -1,6 +1,6 @@
 // ============================================================================
 // Vendored, faithfully-ported reveal animation system from the original
-// standalone Tamil Efootballers Auction app. Deliberately kept as close to
+// standalone Fluxion Arena Auction app. Deliberately kept as close to
 // the original imperative DOM-manipulation code as possible (not rewritten
 // as idiomatic React) to guarantee exact visual/timing fidelity — this is
 // the same code, just fed real data (team logo URLs, card type) as

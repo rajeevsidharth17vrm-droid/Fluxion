@@ -278,7 +278,7 @@ export default function FinalsSetReveal() {
       <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 480 }}>
         <img src={logoUrl} style={{ width: 64, height: 64, objectFit: "contain", opacity: 0.9, marginBottom: 24 }} />
         <p style={{ fontSize: 11, color: "#334155", textTransform: "uppercase", letterSpacing: 4, margin: "0 0 10px" }}>
-          Tamil Efootballers · Finals
+          Fluxion Arena · Finals
         </p>
         <h1 style={{ fontSize: 32, fontWeight: 900, margin: "0 0 6px" }}>Set Draw Reveal</h1>
         <p style={{ fontSize: 15, color: "#475569", margin: "0 0 32px" }}>
@@ -328,7 +328,7 @@ export default function FinalsSetReveal() {
       <div style={{ position: "relative", zIndex: 1, padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", gap: 16, background: "rgba(3,6,15,0.8)", backdropFilter: "blur(8px)" }}>
         <img src={logoUrl} style={{ width: 36, height: 36, objectFit: "contain", flexShrink: 0 }} />
         <div>
-          <p style={{ color: "#334155", fontSize: 10, textTransform: "uppercase", letterSpacing: 3, margin: "0 0 2px" }}>Tamil Efootballers · Finals</p>
+          <p style={{ color: "#334155", fontSize: 10, textTransform: "uppercase", letterSpacing: 3, margin: "0 0 2px" }}>Fluxion Arena · Finals</p>
           <p style={{ color: "white", fontSize: 17, fontWeight: 800, margin: 0 }}>Set Draw Reveal</p>
         </div>
         <div style={{ marginLeft: "auto", textAlign: "right" }}>

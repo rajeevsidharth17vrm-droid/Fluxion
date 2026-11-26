@@ -195,10 +195,10 @@ function TeamRosterChips({ players, bestPerformerId, delay = 3000 }) {
 
 const PANEL_OPTIONS = [
   { value: "standings",     label: "League table"      },
-  { value: "ucl",           label: "UCL"               },
+  { value: "ucl",           label: "Solo Tour"               },
   { value: "duo",           label: "Duo Tournament"    },
-  { value: "weekly",        label: "Weekly"            },
-  { value: "revolution",    label: "Revolution Trophy" },
+  { value: "weekly",        label: "Weekend Tour"            },
+  { value: "revolution",    label: "Quick Tour" },
 ]
 
 
@@ -698,7 +698,7 @@ export default function CommonDashboard() {
   const handlePlayer = (player) => navigate(`/player/${player.id}?${searchParams.toString()}`)
   const isLoading    = teamsLoading || playersLoading
 
-  const currentSeason = parseInt(settings.current_season || "6")
+  const currentSeason = parseInt(settings.current_season || "1")
   const currentYear   = new Date().getFullYear()
 
   const savedSeasons = [...seasonRecords].sort((a, b) => b.season_number - a.season_number)
@@ -765,7 +765,7 @@ export default function CommonDashboard() {
       ) : showUclCelebration && displayUclChampion ? (
         <ChampionCelebration
           trophyImage={uclTrophyLogo}
-          eyebrow="UCL"
+          eyebrow=  "Solo Tour"
           title={displayUclChampion}
           subtitle="is the UCL Champion! 🏆"
           badgeImage={displayUclChampionAvatar.thumb}
@@ -887,7 +887,7 @@ export default function CommonDashboard() {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight mb-1">
-            Tamil Efootball League
+            Fluxion Arena League
           </h1>
 
           {isCurrent ? (

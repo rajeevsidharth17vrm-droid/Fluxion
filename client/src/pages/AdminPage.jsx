@@ -633,9 +633,9 @@ const TABS = [
   { id: "records",    label: "Match records", icon: Activity       },
   { id: "uclgroups",    label: "UCL Groups",    icon: Trophy },
   { id: "uclresults",   label: "UCL Results",   icon: Trophy },
-  { id: "uclknockout",   label: "UCL Knockout",   icon: Trophy },
-  { id: "weekly",     label: "Weekly",       icon: Trophy          },
-  { id: "revolution", label: "Revolution",  icon: Trophy          },
+  { id: "uclknockout",   label: "Solo Tour Knockout",   icon: Trophy },
+  { id: "weekly",     label: "Weekend Tour",       icon: Trophy          },
+  { id: "revolution", label: "Quick Tour",  icon: Trophy          },
   { id: "tlg",        label: "TLG",         icon: Trophy          },
   { id: "teamknockout",  label: "Team Knockout",  icon: Trophy },
   { id: "duo",           label: "Duo",            icon: Users  },
@@ -649,9 +649,9 @@ const TABS = [
 
 // ── DownloadCelebrationCard ────────────────────────────────────────────────────────
 const CARD_CONFIG = [
-  { type: "weekly",           card: weeklyCardImg,  trophy: weeklyTrophy,  label: "Weekly Tournament"      },
-  { type: "revolution",       card: revCardImg,     trophy: revTrophy,     label: "Revolution Trophy"      },
-  { type: "dshann",           card: dshannCardImg,  trophy: dshannTrophy,  label: "Dshann League"          },
+  { type: "weekly",           card: weeklyCardImg,  trophy: weeklyTrophy,  label: "Weekend Tour"      },
+  { type: "revolution",       card: revCardImg,     trophy: revTrophy,     label: "Quick Tour Trophy"      },
+  { type: "dshann",           card: dshannCardImg,  trophy: dshannTrophy,  label: "Auction Tour"          },
   { type: "duo",              card: duoCardImg,     trophy: duoTrophy,     label: "Duo Tournament"         },
   { type: "week_best_player", card: weekCardImg,    trophy: weekTrophy,    label: "Best Player of Week"    },
 ]
@@ -762,11 +762,11 @@ function DownloadCelebrationCard() {
 
 // ── FeaturedPanelCard ─────────────────────────────────────────────────────────
 const PANEL_OPTIONS = [
-  { value: "standings",  label: "Dshann League (Default)" },
-  { value: "ucl",        label: "UCL" },
+  { value: "standings",  label: "Auction Tour (Default)" },
+  { value: "ucl",        label: "Solo Tour" },
   { value: "duo",        label: "Duo Tournament" },
-  { value: "weekly",     label: "Weekly" },
-  { value: "revolution", label: "Revolution Trophy" },
+  { value: "weekly",     label: "Weekend Tour" },
+  { value: "revolution", label: "Quick Tour Trophy" },
 ]
 
 function FeaturedPanelCard() {

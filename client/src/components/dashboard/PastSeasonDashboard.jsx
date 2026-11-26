@@ -122,8 +122,8 @@ export default function PastSeasonDashboard({ record, season }) {
               )}
               {record.ucl_winner && (
                 <div className="flex items-center gap-3 px-5 py-3">
-                  <img src={uclImg} alt="UCL" className="w-8 h-8 object-contain flex-shrink-0" />
-                  <div><p className="text-xs text-slate-500">UCL</p><p className="text-sm font-semibold text-white">{record.ucl_winner}</p></div>
+                  <img src={uclImg} alt=  "Solo Tour" className="w-8 h-8 object-contain flex-shrink-0" />
+                  <div><p className="text-xs text-slate-500">Solo Tour</p><p className="text-sm font-semibold text-white">{record.ucl_winner}</p></div>
                 </div>
               )}
               {weeklyWinners.length > 0 && (

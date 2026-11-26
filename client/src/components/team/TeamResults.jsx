@@ -430,7 +430,7 @@ const MatchExportCard = forwardRef(function MatchExportCard(
               MATCH RESULT
             </p>
             <p style={{ margin: "3px 0 0", fontSize: 11, color: "#64748b", letterSpacing: 3, textTransform: "uppercase" }}>
-              Tamil eFootball League
+              Fluxion Arena League
             </p>
           </div>
         </div>

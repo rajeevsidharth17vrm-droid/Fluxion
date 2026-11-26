@@ -15,9 +15,9 @@ import uclGBTrophy        from "../../../images/ucl_gb.png"
 
 const TROPHY_DEFS = [
   { key: "trophy1_count", image: ballondorTrophy,    label: "Ballon d'Or"   },
-  { key: "trophy2_count", image: teamLeagueTrophy,   label: "Dshann League"   },
-  { key: "trophy4_count", image: uclTrophy,          label: "UCL"           },
-  { key: "trophy3_count", image: weeklyTrophy,       label: "Weekly"        },
+  { key: "trophy2_count", image: teamLeagueTrophy,   label: "Auction Tour"   },
+  { key: "trophy4_count", image: uclTrophy,          label: "Solo Tour"           },
+  { key: "trophy3_count", image: weeklyTrophy,       label: "Weekend Tour"        },
   { key: "trophy5_count", image: goldenBootTrophy,   label: "Wkly GB"       },
   { key: "trophy6_count", image: teamLeagueGBTrophy, label: "TL GB"         },
   { key: "trophy7_count", image: uclGBTrophy,        label: "UCL GB"        },
@@ -99,7 +99,7 @@ function PlayerCard({ data, side, onPlayerClick }) {
           <div className="flex justify-between"><span className="text-slate-400">Matches</span><span className="text-white font-semibold">{s?.total ?? 0}</span></div>
           <div className="flex justify-between"><span className="text-slate-400">W / D / L</span><span className="text-white font-semibold">{s?.wins ?? 0}/{s?.draws ?? 0}/{s?.losses ?? 0}</span></div>
           <div className="flex justify-between"><span className="text-slate-400">League W/D/L</span><span className="text-white font-semibold">{s?.leagueWins ?? 0}/{s?.leagueDraws ?? 0}/{s?.leagueLosses ?? 0}</span></div>
-          <div className="flex justify-between"><span className="text-slate-400">UCL W/D/L</span><span className="text-white font-semibold">{s?.uclWins ?? 0}/{s?.uclDraws ?? 0}/{s?.uclLosses ?? 0}</span></div>
+          <div className="flex justify-between"><span className="text-slate-400">Solo Tour W/D/L</span><span className="text-white font-semibold">{s?.uclWins ?? 0}/{s?.uclDraws ?? 0}/{s?.uclLosses ?? 0}</span></div>
           <div className="flex justify-between"><span className="text-slate-400">Weekly W/D/L</span><span className="text-white font-semibold">{s?.weeklyWins ?? 0}/{s?.weeklyDraws ?? 0}/{s?.weeklyLosses ?? 0}</span></div>
           {trophyTotal > 0 && (
             <>
@@ -249,7 +249,7 @@ export default function PlayerComparison({ onPlayerClick }) {
             <div className="flex items-center gap-3 pb-3 border-b border-surface-border/50">
               <img src="/logo.png" alt="TEC Logo" className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
               <div className="flex-1 text-center">
-                <p className="text-xs text-slate-500 uppercase tracking-widest">Tamil Efootballers · Player Comparison</p>
+                <p className="text-xs text-slate-500 uppercase tracking-widest">Fluxion Arena · Player Comparison</p>
                 <p className="text-white font-bold mt-0.5">{dataA.player.name} <span className="text-slate-500">vs</span> {dataB.player.name}</p>
               </div>
               <div className="w-10" />{/* spacer to balance logo */}

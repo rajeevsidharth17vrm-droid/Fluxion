@@ -13,11 +13,11 @@ import uclGBTrophy        from "../../../images/ucl_gb.png"
 
 const TROPHY_OPTIONS = [
   { value: "trophy1Count", label: "Ballon d'Or",           image: ballondorTrophy    },
-  { value: "trophy2Count", label: "Dshann League",           image: teamLeagueTrophy   },
-  { value: "trophy4Count", label: "UCL",                   image: uclTrophy          },
-  { value: "trophy3Count", label: "Weekly",                image: weeklyTrophy       },
+  { value: "trophy2Count", label: "Auction Tour",           image: teamLeagueTrophy   },
+  { value: "trophy4Count", label: "Solo Tour",                   image: uclTrophy          },
+  { value: "trophy3Count", label: "Weekend Tour",                image: weeklyTrophy       },
   { value: "trophy5Count", label: "Weekly Golden Boot",    image: goldenBootTrophy   },
-  { value: "trophy6Count", label: "Dshann League Golden Boot", image: teamLeagueGBTrophy },
+  { value: "trophy6Count", label: "Auction Tour Golden Boot", image: teamLeagueGBTrophy },
   { value: "trophy7Count", label: "UCL Golden Boot",       image: uclGBTrophy        },
 ]
 

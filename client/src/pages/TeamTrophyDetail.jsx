@@ -36,7 +36,7 @@ function positionStyle(pos) {
 
 // ── Trophy shelf (mirrors player cabinet) ─────────────────────────────────────
 const TEAM_TROPHY_TYPES = {
-  team_league:  { key: "team_league",  image: teamLeagueTrophy, label: "Dshann League",  color: "#10b981", glow: "rgba(16,185,129,0.45)"  },
+  team_league:  { key: "team_league",  image: teamLeagueTrophy, label: "Auction Tour",  color: "#10b981", glow: "rgba(16,185,129,0.45)"  },
   championship: { key: "championship", image: championshipImg,  label: "Team of Champions", color: "#f59e0b", glow: "rgba(245,158,11,0.45)"   },
   europa:       { key: "europa",       image: europaTrophy,     label: "Europa",       color: "#818cf8", glow: "rgba(129,140,248,0.45)"  },
 }
@@ -115,7 +115,7 @@ function generateSummary(season, teamName, isChampion) {
   const squadLine = totalPlayers > 0 ? ` The squad had ${totalPlayers} players.` : ""
 
   const resultLines = isChampion
-    ? [` They lifted the Dshann League title`, ` They were crowned Dshann League champions`, ` A historic triumph — the Dshann League title was theirs`]
+    ? [` They lifted the Auction Tour title`, ` They were crowned Auction Tour champions`, ` A historic triumph — the Auction Tour title was theirs`]
     : season.relegated
     ? [` It ended in relegation`, ` The season ended in heartbreak with relegation`]
     : winRate >= 60
@@ -323,7 +323,7 @@ export default function TeamTrophyDetail() {
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
         <div className="card p-4 text-center">
           <div className="flex items-center justify-center gap-2 mb-1">
-            <img src={teamLeagueTrophy} alt="Dshann League" className="w-5 h-5 object-contain" />
+            <img src={teamLeagueTrophy} alt="Auction Tour" className="w-5 h-5 object-contain" />
             <p className="text-2xl font-extrabold text-accent font-mono">{teamLeagueCount}</p>
           </div>
           <p className="text-xs text-slate-500">Team League</p>
@@ -387,7 +387,7 @@ export default function TeamTrophyDetail() {
               <div className="flex items-center gap-3">
                 <div className="w-1 h-8 rounded-full bg-gold" style={{ boxShadow: "0 0 8px rgba(245,158,11,0.6)" }} />
                 <div>
-                  <p className="text-[9px] text-slate-600 uppercase tracking-[0.2em]">Tamil Efootballers</p>
+                  <p className="text-[9px] text-slate-600 uppercase tracking-[0.2em]">Fluxion Arena</p>
                   <p className="text-sm font-bold text-white">{team.name}'s Trophy Cabinet</p>
                 </div>
               </div>

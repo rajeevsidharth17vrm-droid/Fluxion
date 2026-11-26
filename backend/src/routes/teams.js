@@ -1592,10 +1592,10 @@ router.post("/season-reset", authenticate, adminOnly, async (req, res, next) => 
       await q(`
         INSERT INTO app_settings (key, value)
         VALUES ('current_season', (
-          SELECT (COALESCE(value::int, 6) + 1)::text FROM app_settings WHERE key = 'current_season'
+          SELECT (COALESCE(value::int, 1) + 1)::text FROM app_settings WHERE key = 'current_season'
         ))
         ON CONFLICT (key) DO UPDATE SET value = (
-          SELECT (COALESCE(value::int, 6) + 1)::text FROM app_settings WHERE key = 'current_season'
+          SELECT (COALESCE(value::int, 1) + 1)::text FROM app_settings WHERE key = 'current_season'
         )
       `)
     })
