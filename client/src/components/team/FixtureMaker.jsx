@@ -4,7 +4,6 @@ import GradeBadge from "../common/GradeBadge"
 import PlayerAvatarIcon from "../common/PlayerAvatarIcon"
 import { useLineup, useSaveLineup, useClearLineup, useH2H } from "../../lib/queries"
 import { cn } from "../../lib/utils"
-import tecLogo from "../../../images/logo.png"
 import ScoutingReport from "./ScoutingReport"
 
 // ── H2H Popup ────────────────────────────────────────────────────────────────

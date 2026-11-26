@@ -2,7 +2,6 @@ import { forwardRef, useRef, useState } from "react"
 import { toPng } from "html-to-image"
 import { Download, Loader2, Trophy } from "lucide-react"
 import { useTopScorers } from "../../lib/queries"
-import tefLogo from "../../../images/logo.png"
 import goldenBootTrophy from "../../../images/Golden Boot.png"
 
 export default function GoldenBootExport() {
@@ -124,7 +123,7 @@ const GoldenBootCard = forwardRef(function GoldenBootCard({ scorers }, ref) {
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-          <img src={tefLogo} alt="TEF"
+          <img src="/logo.png" alt="TEF"
             style={{ width: 56, height: 56, objectFit: "contain", borderRadius: 12, flexShrink: 0 }} />
           <div>
             <p style={{ margin: 0, fontSize: 11, color: "#64748b", letterSpacing: 3, textTransform: "uppercase" }}>

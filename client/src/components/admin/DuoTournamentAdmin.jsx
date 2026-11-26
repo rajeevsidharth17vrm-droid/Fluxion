@@ -5,7 +5,6 @@ import { useNavigate } from "react-router-dom"
 import api from "../../lib/api"
 import { useSettings } from "../../lib/queries"
 import { toPng } from "html-to-image"
-import logoUrl from "../../../images/logo.png"
 import { cn } from "../../lib/utils"
 import { uploadTeamLogo } from "../../lib/supabase"
 
@@ -830,13 +829,13 @@ function DuoExportCard({ round, fixtures, exportRef, visible, season }) {
       fontFamily: "system-ui, sans-serif", overflow: "visible",
       zIndex: visible ? 9999 : -1, opacity: visible ? 1 : 0, pointerEvents: "none",
     }}>
-      <img src={logoUrl} alt="" style={{
+      <img src="/logo.png" alt="" style={{
         position: "absolute", top: "50%", left: "50%",
         transform: "translate(-50%, -50%)",
         width: 320, height: 320, objectFit: "contain", opacity: 0.04, pointerEvents: "none",
       }} />
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32, position: "relative" }}>
-        <img src={logoUrl} alt="TEC" style={{ width: 48, height: 48, objectFit: "contain" }} />
+        <img src="/logo.png" alt="TEC" style={{ width: 48, height: 48, objectFit: "contain" }} />
         <div>
           <p style={{ color: "#64748b", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, margin: 0 }}>
             Fluxion Arena · Duo Tournament S{season}
@@ -906,13 +905,13 @@ function KnockoutExportCard({ round, fixtures, exportRef, visible, season }) {
       fontFamily: "system-ui, sans-serif", overflow: "visible",
       zIndex: visible ? 9999 : -1, opacity: visible ? 1 : 0, pointerEvents: "none",
     }}>
-      <img src={logoUrl} alt="" style={{
+      <img src="/logo.png" alt="" style={{
         position: "absolute", top: "50%", left: "50%",
         transform: "translate(-50%, -50%)",
         width: 320, height: 320, objectFit: "contain", opacity: 0.04, pointerEvents: "none",
       }} />
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 32 }}>
-        <img src={logoUrl} alt="TEC" style={{ width: 48, height: 48, objectFit: "contain" }} />
+        <img src="/logo.png" alt="TEC" style={{ width: 48, height: 48, objectFit: "contain" }} />
         <div>
           <p style={{ color: "#64748b", fontSize: 12, textTransform: "uppercase", letterSpacing: 2, margin: 0 }}>
             Fluxion Arena · Duo Tournament S{season}

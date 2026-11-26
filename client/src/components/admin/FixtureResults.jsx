@@ -8,7 +8,6 @@ import {
 } from "../../lib/queries"
 import { cn } from "../../lib/utils"
 import { toPng } from "html-to-image"
-import logoUrl from "../../../images/logo.png"
 
 // ── Generate Full Season ───────────────────────────────────────────────────
 function GenerateSeasonCard({ hasExistingFixtures }) {
@@ -713,7 +712,7 @@ function FixtureExportCard({ round, fixtures, exportRef, visible }) {
       }}
     >
       {/* Background watermark */}
-      <img src={logoUrl} alt="" style={{
+      <img src="/logo.png" alt="" style={{
         position: "absolute", top: "50%", left: "50%",
         transform: "translate(-50%, -50%)",
         width: 280, height: 280, objectFit: "contain",
@@ -722,7 +721,7 @@ function FixtureExportCard({ round, fixtures, exportRef, visible }) {
 
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 28, position: "relative" }}>
-        <img src={logoUrl} alt="TEC" style={{ width: 44, height: 44, objectFit: "contain" }} />
+        <img src="/logo.png" alt="TEC" style={{ width: 44, height: 44, objectFit: "contain" }} />
         <div>
           <p style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", letterSpacing: 2, margin: 0 }}>Fluxion Arena · Auction Tour</p>
           <p style={{ color: "#ffffff", fontSize: 22, fontWeight: 800, margin: 0 }}>Round {round} Fixtures</p>

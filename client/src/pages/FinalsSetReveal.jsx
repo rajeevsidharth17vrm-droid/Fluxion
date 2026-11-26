@@ -4,7 +4,6 @@ import { useState, useEffect, useCallback, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import api from "../lib/api"
-import logoUrl from "../../images/logo.png"
 
 const SET_ACCENTS = ["#22d3ee", "#a78bfa", "#34d399", "#fb923c", "#f472b6"]
 
@@ -252,7 +251,7 @@ export default function FinalsSetReveal() {
   if (isLoading || drawMut.isPending) return (
     <div style={{ minHeight: "100vh", background: "#03060f", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ textAlign: "center" }}>
-        <img src={logoUrl} style={{ width: 56, height: 56, objectFit: "contain", opacity: 0.4, marginBottom: 16 }} />
+        <img src="/logo.png" style={{ width: 56, height: 56, objectFit: "contain", opacity: 0.4, marginBottom: 16 }} />
         <p style={{ color: "#334155", fontSize: 14, letterSpacing: 2, textTransform: "uppercase" }}>
           {drawMut.isPending ? "Preparing draw…" : "Loading…"}
         </p>
@@ -276,7 +275,7 @@ export default function FinalsSetReveal() {
     }}>
       <div style={{ position: "fixed", inset: 0, pointerEvents: "none", background: "radial-gradient(ellipse 70% 50% at 50% 50%, rgba(34,211,238,0.07) 0%, transparent 70%)" }} />
       <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 480 }}>
-        <img src={logoUrl} style={{ width: 64, height: 64, objectFit: "contain", opacity: 0.9, marginBottom: 24 }} />
+        <img src="/logo.png" style={{ width: 64, height: 64, objectFit: "contain", opacity: 0.9, marginBottom: 24 }} />
         <p style={{ fontSize: 11, color: "#334155", textTransform: "uppercase", letterSpacing: 4, margin: "0 0 10px" }}>
           Fluxion Arena · Finals
         </p>
@@ -326,7 +325,7 @@ export default function FinalsSetReveal() {
 
       {/* Header */}
       <div style={{ position: "relative", zIndex: 1, padding: "16px 24px", borderBottom: "1px solid rgba(255,255,255,0.05)", display: "flex", alignItems: "center", gap: 16, background: "rgba(3,6,15,0.8)", backdropFilter: "blur(8px)" }}>
-        <img src={logoUrl} style={{ width: 36, height: 36, objectFit: "contain", flexShrink: 0 }} />
+        <img src="/logo.png" style={{ width: 36, height: 36, objectFit: "contain", flexShrink: 0 }} />
         <div>
           <p style={{ color: "#334155", fontSize: 10, textTransform: "uppercase", letterSpacing: 3, margin: "0 0 2px" }}>Fluxion Arena · Finals</p>
           <p style={{ color: "white", fontSize: 17, fontWeight: 800, margin: 0 }}>Set Draw Reveal</p>

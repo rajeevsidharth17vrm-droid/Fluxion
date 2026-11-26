@@ -2,7 +2,6 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation } from "@tanstack/react-query"
 import api from "../../lib/api"
-import logoUrl from "../../../images/logo.png"
 
 // One accent colour per group (A–H)
 const GROUP_ACCENT = {
@@ -56,7 +55,7 @@ function DrawCard({ pair, flipped }) {
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 34, opacity: 0.25,
           }}>?</div>
-          <img src={logoUrl} alt="" style={{ width: 36, height: 36, objectFit: "contain", opacity: 0.12 }} />
+          <img src="/logo.png" alt="" style={{ width: 36, height: 36, objectFit: "contain", opacity: 0.12 }} />
           <p style={{ fontSize: 10, color: "rgba(255,255,255,0.15)", letterSpacing: 3, textTransform: "uppercase", margin: 0 }}>Drawing…</p>
         </div>
 
@@ -317,7 +316,7 @@ export default function DuoDrawReveal() {
   if (isLoading) return (
     <div style={{ minHeight: "100vh", background: "#03060f", display: "flex", alignItems: "center", justifyContent: "center" }}>
       <div style={{ textAlign: "center" }}>
-        <img src={logoUrl} style={{ width: 56, height: 56, objectFit: "contain", opacity: 0.4, marginBottom: 16 }} />
+        <img src="/logo.png" style={{ width: 56, height: 56, objectFit: "contain", opacity: 0.4, marginBottom: 16 }} />
         <p style={{ color: "#334155", fontSize: 14, letterSpacing: 2, textTransform: "uppercase" }}>Loading draw…</p>
       </div>
     </div>
@@ -353,7 +352,7 @@ export default function DuoDrawReveal() {
       }} />
 
       <div style={{ position: "relative", zIndex: 1, textAlign: "center", maxWidth: 480 }}>
-        <img src={logoUrl} style={{ width: 64, height: 64, objectFit: "contain", opacity: 0.9, marginBottom: 28 }} />
+        <img src="/logo.png" style={{ width: 64, height: 64, objectFit: "contain", opacity: 0.9, marginBottom: 28 }} />
 
         <p style={{ fontSize: 11, color: "#334155", textTransform: "uppercase", letterSpacing: 4, margin: "0 0 10px" }}>
           Fluxion Arena · Duo Tournament
@@ -445,7 +444,7 @@ export default function DuoDrawReveal() {
         background: "rgba(3,6,15,0.8)",
         backdropFilter: "blur(8px)",
       }}>
-        <img src={logoUrl} style={{ width: 38, height: 38, objectFit: "contain", flexShrink: 0 }} />
+        <img src="/logo.png" style={{ width: 38, height: 38, objectFit: "contain", flexShrink: 0 }} />
         <div>
           <p style={{ color: "#334155", fontSize: 10, textTransform: "uppercase", letterSpacing: 3, margin: "0 0 2px" }}>
             Fluxion Arena · Duo Tournament

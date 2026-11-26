@@ -3,7 +3,6 @@ import { CheckCircle, ChevronDown, ChevronUp, Loader2, Pencil, Trash2, X, Save, 
 import { toPng } from "html-to-image"
 import { cn } from "../../lib/utils"
 import { useLogTeamRecord, useFixtureRecords, useEditTeamRecord, useDeleteTeamRecord, useLineup } from "../../lib/queries"
-import tefLogo from "../../../images/logo.png"
 
 const RESULTS = [
   { value: "win",  label: "Win",  color: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30" },
@@ -423,7 +422,7 @@ const MatchExportCard = forwardRef(function MatchExportCard(
         display: "flex", alignItems: "center", justifyContent: "space-between",
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
-          <img src={tefLogo} alt="TEF"
+          <img src="/logo.png" alt="TEF"
             style={{ width: 48, height: 48, objectFit: "contain", borderRadius: 10 }} />
           <div>
             <p style={{ margin: 0, fontSize: 18, fontWeight: 900, color: "#f1f5f9", letterSpacing: 1 }}>

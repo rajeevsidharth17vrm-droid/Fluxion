@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query"
 import { Download, Plus, X, ChevronDown } from "lucide-react"
 import api, { teamsApi } from "../../lib/api"
 import { cn } from "../../lib/utils"
-import tefLogo from "../../../images/logo.png"
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 const GRADE_COLORS = { S: "#f59e0b", "A+": "#a78bfa", A: "#60a5fa", B: "#34d399", C: "#94a3b8" }

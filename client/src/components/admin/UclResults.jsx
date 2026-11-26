@@ -5,7 +5,6 @@ import { useUclFixtures } from "../../lib/queries"
 import { uclApi } from "../../lib/api"
 import { useQueryClient } from "@tanstack/react-query"
 import { toPng } from "html-to-image"
-import logoUrl from "../../../images/logo.png"
 
 function FixtureCard({ fix, onChanged }) {
   const qc = useQueryClient()
@@ -232,7 +231,7 @@ function RoundExportCard({ round, byGroup, exportRef, visible }) {
     >
       {/* Background logo watermark */}
       <img
-        src={logoUrl}
+        src="/logo.png"
         alt=""
         style={{
           position: "absolute", top: "50%", left: "50%",
@@ -243,7 +242,7 @@ function RoundExportCard({ round, byGroup, exportRef, visible }) {
       />
       {/* Header */}
       <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 24, position: "relative" }}>
-        <img src={logoUrl} alt="TEC" style={{ width: 44, height: 44, objectFit: "contain" }} />
+        <img src="/logo.png" alt="TEC" style={{ width: 44, height: 44, objectFit: "contain" }} />
         <div>
           <p style={{ color: "#64748b", fontSize: 11, textTransform: "uppercase", letterSpacing: 2, margin: 0 }}>Fluxion Arena · Solo Tour Group Stage</p>
           <p style={{ color: "#ffffff", fontSize: 20, fontWeight: 800, margin: 0 }}>Round {round} Fixtures</p>
